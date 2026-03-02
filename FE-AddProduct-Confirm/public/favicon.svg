@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
-  <!-- Left Chevron (Red) - Points Right -->
-  <path d="M 15 15 L 50 50 L 15 85" stroke="#dc2626" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
-  
-  <!-- Right Chevron (Blue) - Points Left -->
-  <path d="M 85 15 L 50 50 L 85 85" stroke="#1e3a8a" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>
