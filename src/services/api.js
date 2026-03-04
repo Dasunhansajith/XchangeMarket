@@ -22,6 +22,11 @@ const apiWithoutPrefix = axios.create({
 
 // Interceptor to add auth token (applied to both)
 const addToken = (config) => {
+  // Don't add token for login or register endpoints
+  if (config.url.includes('/auth/login') || config.url.includes('/auth/register')) {
+    return config;
+  }
+
   const token = localStorage.getItem('authToken');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -104,6 +109,9 @@ export const sellerAPI = {
 
   getAllApplications: () =>
     apiWithPrefix.get('/sellers/applications'),
+
+  registerShop: (shopData) =>
+    apiWithPrefix.post('/sellers/register-shop', shopData),
 };
 
 // ============ FRAUD ENDPOINTS ============

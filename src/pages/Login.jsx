@@ -35,16 +35,20 @@ const Login = () => {
         }
 
         const result = await login({
-            email: formData.email,
+            username: formData.email,
             password: formData.password
         });
 
         if (result.success) {
             const user = result.data.user || result.data;
             const isAdmin = user.role === 'ADMIN' || user.role === 'ROLE_ADMIN' || user.roles?.includes('ROLE_ADMIN') || user.roles?.includes('ADMIN');
+            const isSeller = user.role === 'seller' || user.role === 'ROLE_SELLER' || user.roles?.includes('seller') || user.roles?.includes('ROLE_SELLER');
+            const hasShop = user.hasShop || user.shopId || user.shopRegistered;
 
             if (isAdmin) {
                 navigate('/admin/dashboard');
+            } else if (isSeller && hasShop) {
+                navigate('/seller-dashboard');
             } else {
                 navigate('/');
             }

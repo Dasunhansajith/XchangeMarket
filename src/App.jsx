@@ -7,6 +7,7 @@ import BecomeSeller from './pages/BecomeSeller';
 import AboutUs from './pages/AboutUs';
 import ContactUs from './pages/ContactUs';
 import AdminDashboard from './pages/AdminDashboard';
+import SellerDashboard from './pages/SellerDashboard';
 import { LanguageProvider } from './context/LanguageContext';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute, AdminRoute } from './components/ProtectedRoute';
@@ -223,6 +224,14 @@ function App() {
                 <AdminRoute>
                   <AdminDashboard />
                 </AdminRoute>
+              }
+            />
+            <Route
+              path="/seller-dashboard"
+              element={
+                <ProtectedRoute>
+                  <SellerDashboard />
+                </ProtectedRoute>
               }
             />
           </Routes>

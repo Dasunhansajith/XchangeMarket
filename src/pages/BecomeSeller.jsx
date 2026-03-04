@@ -3,7 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { motion } from 'framer-motion';
 import { categories } from '../components/CategoryGrid';
-import { FaStore, FaMoneyBillWave, FaCreditCard, FaUniversity, FaMapMarkerAlt, FaTags, FaLock } from 'react-icons/fa';
+import { FaStore, FaMoneyBillWave, FaCreditCard, FaUniversity, FaMapMarkerAlt, FaTags } from 'react-icons/fa';
+import { sellerAPI } from '../services/api';
+import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 import bgImage from '../assets/Becoming_an_online_seller.jpg';
 
 const locationData = {
@@ -36,13 +39,11 @@ const locationData = {
 
 const BecomeSeller = () => {
     const { t } = useLanguage();
+    const { user, setUser } = useAuth();
     const navigate = useNavigate();
 
-    // Mock user data - in a real app, this would come from auth context
-    const [userData, setUserData] = useState({
-        name: "Dasun", // Assuming user is logged in
-        email: "dasun@example.com"
-    });
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [formData, setFormData] = useState({
@@ -54,12 +55,9 @@ const BecomeSeller = () => {
             cardPayment: false
         },
         categories: [],
-        location: '', // Consider removing if fully replaced, but maybe keep for backend compatibility or remove it. Let's keep it clean.
+        location: '',
         district: '',
-        city: '',
-        city: '',
-        password: '',
-        confirmPassword: ''
+        city: ''
     });
 
     const handleChange = (e) => {
@@ -86,15 +84,67 @@ const BecomeSeller = () => {
         }
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log('Seller Application Data:', formData);
+        setLoading(true);
+        setError(null);
 
-        // Simulate API call
-        setTimeout(() => {
-            alert("Application Submitted Successfully! Welcome to XChange Seller Program.");
-            navigate('/');
-        }, 1000);
+        // Map frontend state to requested JSON format
+        const selectedPaymentMethods = Object.entries(formData.paymentMethods)
+            .filter(([_, checked]) => checked)
+            .map(([method, _]) => {
+                if (method === 'cod') return 'Cash on Delivery';
+                if (method === 'onlineTransfer') return 'Online Transfer';
+                if (method === 'cardPayment') return 'Card Payment';
+                return method;
+            })
+            .join(', ');
+
+        const shopData = {
+            shopName: formData.shopName.trim(),
+            shopCategories: formData.categories.join(', '),
+            district: formData.district,
+            city: formData.city,
+            acceptedPaymentMethods: selectedPaymentMethods,
+            email: user?.email || localStorage.getItem('userEmail') // Fallback
+        };
+
+        try {
+            console.log('Sending Registration Data:', shopData);
+            const response = await sellerAPI.registerShop(shopData);
+            console.log('Backend Response:', response.data);
+
+            toast.success("Shop Registered Successfully!");
+
+            // Update AuthContext user state with the updated user info from backend
+            const userData = response.data?.user || response.data;
+            const token = response.data?.token;
+
+            if (userData) {
+                setUser(userData);
+                localStorage.setItem('userInfo', JSON.stringify(userData));
+                if (token) {
+                    localStorage.setItem('authToken', token);
+                }
+            } else {
+                // Last resort fallback
+                setUser(prev => ({
+                    ...prev,
+                    hasShop: true,
+                    shopId: response.data?.id || true
+                }));
+            }
+
+            // Navigate to dashboard
+            navigate('/seller-dashboard');
+        } catch (err) {
+            console.error('Registration failed:', err);
+            const errMsg = err.response?.data?.message || err.response?.data?.error || "Failed to register shop. Please check your connection.";
+            setError(errMsg);
+            toast.error(errMsg);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -137,6 +187,12 @@ const BecomeSeller = () => {
                 <div className="bg-white/95 backdrop-blur-md py-8 px-4 shadow-2xl sm:rounded-xl sm:px-10 border border-white/20">
                     <form className="space-y-6" onSubmit={handleSubmit}>
 
+                        {error && (
+                            <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded text-sm font-sans">
+                                {error}
+                            </div>
+                        )}
+
                         {/* Shop Name */}
                         <div>
                             <label htmlFor="shopName" className="block text-sm font-medium text-gray-700 font-sans">
@@ -159,31 +215,7 @@ const BecomeSeller = () => {
                             </div>
                         </div>
 
-                        {/* Shop Logo */}
-                        <div>
-                            <label htmlFor="shopLogo" className="block text-sm font-medium text-gray-700 font-sans">
-                                {t.shopLogoLabel}
-                            </label>
-                            <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:border-indigo-400 transition-colors">
-                                <div className="space-y-1 text-center">
-                                    <div className="flex text-sm text-gray-600">
-                                        <label htmlFor="shopLogo" className="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
-                                            <span>{t.uploadFile}</span>
-                                            <input id="shopLogo" name="shopLogo" type="file" className="sr-only" onChange={handleChange} accept="image/*" />
-                                        </label>
-                                        <p className="pl-1">{t.dragDrop}</p>
-                                    </div>
-                                    <p className="text-xs text-gray-500">
-                                        {t.fileSizeLimit}
-                                    </p>
-                                    {formData.shopLogo && (
-                                        <p className="text-xs text-green-600 font-semibold mt-2">
-                                            {t.fileSelected} {formData.shopLogo.name}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
+
 
                         {/* Categories (Multi-Select Dropdown) */}
                         <div className="relative">
@@ -350,54 +382,15 @@ const BecomeSeller = () => {
                             </div>
                         </div>
 
-                        {/* Password */}
-                        <div>
-                            <label htmlFor="password" className="block text-sm font-medium text-gray-700 font-sans">
-                                {t.password}
-                            </label>
-                            <div className="mt-1 relative rounded-md shadow-sm">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <FaLock className="text-gray-400" />
-                                </div>
-                                <input
-                                    id="password"
-                                    name="password"
-                                    type="password"
-                                    required
-                                    value={formData.password}
-                                    onChange={handleChange}
-                                    className="appearance-none block w-full pl-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-200"
-                                />
-                            </div>
-                        </div>
 
-                        {/* Confirm Password */}
-                        <div>
-                            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 font-sans">
-                                {t.confirmPassword}
-                            </label>
-                            <div className="mt-1 relative rounded-md shadow-sm">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <FaLock className="text-gray-400" />
-                                </div>
-                                <input
-                                    id="confirmPassword"
-                                    name="confirmPassword"
-                                    type="password"
-                                    required
-                                    value={formData.confirmPassword}
-                                    onChange={handleChange}
-                                    className="appearance-none block w-full pl-10 px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-200"
-                                />
-                            </div>
-                        </div>
 
                         <div>
                             <button
                                 type="submit"
-                                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-indigo-600 to-purple-800 hover:from-indigo-700 hover:to-purple-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-300 transform hover:scale-[1.02]"
+                                disabled={loading}
+                                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-red-600 to-red-800 hover:from-red-700 hover:to-red-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {t.registerShopButton}
+                                {loading ? "Registering Shop..." : t.registerShopButton}
                             </button>
                         </div>
                     </form>

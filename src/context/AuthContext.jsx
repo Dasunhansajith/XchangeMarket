@@ -56,7 +56,10 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
       setError(null);
+      console.log('Attempting login with:', credentials);
       const response = await authAPI.login(credentials);
+      console.log('Login response:', response.data);
+
       const token = response.data.token || response.data.accessToken;
       const user = response.data.user || response.data;
 
@@ -71,6 +74,7 @@ export const AuthProvider = ({ children }) => {
         throw new Error('Invalid credentials or no token received');
       }
     } catch (err) {
+      console.error('Login error details:', err.response?.data || err.message);
       const errorMessage = err.response?.data?.message || err.response?.data?.error || err.message || 'Login failed';
       setError(errorMessage);
       toast.error(errorMessage);
@@ -129,8 +133,23 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  // Enhanced setUser that also updates localStorage
+  const updateUserInfo = useCallback((newUserInfo) => {
+    if (typeof newUserInfo === 'function') {
+      setUser(prev => {
+        const updated = newUserInfo(prev);
+        authHelpers.setUserInfo(updated);
+        return updated;
+      });
+    } else {
+      authHelpers.setUserInfo(newUserInfo);
+      setUser(newUserInfo);
+    }
+  }, []);
+
   const value = {
     user,
+    setUser: updateUserInfo,
     token,
     loading,
     error,

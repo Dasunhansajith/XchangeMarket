@@ -107,10 +107,10 @@ const Navbar = () => {
                         )}
 
                         <Link
-                            to={isAuthenticated ? "/become-seller" : "/login?role=seller"}
+                            to={isAuthenticated ? (user?.hasShop ? "/seller-dashboard" : "/become-seller") : "/login?role=seller"}
                             className="px-6 py-2.5 rounded-full font-bold text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 transition-all duration-300 shadow-lg shadow-red-500/30 transform hover:scale-105 hover:-translate-y-0.5 flex items-center gap-2"
                         >
-                            <span>{t.becomeSeller}</span>
+                            <span>{isAuthenticated && user?.hasShop ? "DASHBOARD" : t.becomeSeller}</span>
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
                         </Link>
 
@@ -189,11 +189,11 @@ const Navbar = () => {
                         </Link>
                     )}
                     <Link
-                        to={isAuthenticated ? "/become-seller" : "/login?role=seller"}
+                        to={isAuthenticated ? (user?.hasShop ? "/seller-dashboard" : "/become-seller") : "/login?role=seller"}
                         className="w-full text-center px-6 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 transition-all shadow-lg"
                         onClick={() => setIsOpen(false)}
                     >
-                        {t.becomeSeller}
+                        {isAuthenticated && user?.hasShop ? "DASHBOARD" : t.becomeSeller}
                     </Link>
                 </div>
             </div>
