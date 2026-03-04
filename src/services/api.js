@@ -129,6 +129,27 @@ export const contactAPI = {
     apiWithPrefix.post('/contact', messageData),
 };
 
+// ============ PRODUCT ENDPOINTS ============
+export const productAPI = {
+  getAllProducts: () =>
+    apiWithPrefix.get('/products'),
+
+  getProductById: (id) =>
+    apiWithPrefix.get(`/products/${id}`),
+
+  getMyProducts: () =>
+    apiWithPrefix.get('/products/seller/me'),
+
+  createProduct: (productData) =>
+    apiWithPrefix.post('/products', productData),
+
+  updateProduct: (id, productData) =>
+    apiWithPrefix.put(`/products/${id}`, productData),
+
+  deleteProduct: (id) =>
+    apiWithPrefix.delete(`/products/${id}`),
+};
+
 // ============ MISC ENDPOINTS ============
 export const miscAPI = {
   getFeaturedVehicles: () =>
