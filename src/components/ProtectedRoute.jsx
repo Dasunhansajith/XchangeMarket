@@ -31,7 +31,9 @@ export const AdminRoute = ({ children }) => {
     );
   }
 
-  if (!isAuthenticated || user?.role !== 'ADMIN') {
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'ROLE_ADMIN' || user?.roles?.includes('ROLE_ADMIN') || user?.roles?.includes('ADMIN');
+
+  if (!isAuthenticated || !isAdmin) {
     return <Navigate to="/login" replace />;
   }
 

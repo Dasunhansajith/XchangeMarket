@@ -6,9 +6,10 @@ import Signup from './pages/Signup';
 import BecomeSeller from './pages/BecomeSeller';
 import AboutUs from './pages/AboutUs';
 import ContactUs from './pages/ContactUs';
+import AdminDashboard from './pages/AdminDashboard';
 import { LanguageProvider } from './context/LanguageContext';
 import { AuthProvider } from './context/AuthContext';
-import { ProtectedRoute } from './components/ProtectedRoute';
+import { ProtectedRoute, AdminRoute } from './components/ProtectedRoute';
 
 
 import CategoryGrid from './components/CategoryGrid';
@@ -208,13 +209,21 @@ function App() {
             <Route path="/contact" element={<ContactUs />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            <Route 
-              path="/become-seller" 
+            <Route
+              path="/become-seller"
               element={
                 <ProtectedRoute>
                   <BecomeSeller />
                 </ProtectedRoute>
-              } 
+              }
+            />
+            <Route
+              path="/admin/dashboard"
+              element={
+                <AdminRoute>
+                  <AdminDashboard />
+                </AdminRoute>
+              }
             />
           </Routes>
           <Footer />

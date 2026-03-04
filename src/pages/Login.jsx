@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
@@ -8,8 +8,11 @@ const Login = () => {
     const { t } = useLanguage();
     const { login, loading, error } = useAuth();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const role = searchParams.get('role');
+
     const [formData, setFormData] = useState({
-        username: '',
+        email: '',
         password: ''
     });
     const [localError, setLocalError] = useState(null);
@@ -26,18 +29,25 @@ const Login = () => {
         e.preventDefault();
         setLocalError(null);
 
-        if (!formData.username || !formData.password) {
+        if (!formData.email || !formData.password) {
             setLocalError('Please fill in all fields');
             return;
         }
 
         const result = await login({
-            email: formData.username,
+            email: formData.email,
             password: formData.password
         });
 
         if (result.success) {
-            navigate('/');
+            const user = result.data.user || result.data;
+            const isAdmin = user.role === 'ADMIN' || user.role === 'ROLE_ADMIN' || user.roles?.includes('ROLE_ADMIN') || user.roles?.includes('ADMIN');
+
+            if (isAdmin) {
+                navigate('/admin/dashboard');
+            } else {
+                navigate('/');
+            }
         } else {
             setLocalError(result.error || 'Login failed');
         }
@@ -66,7 +76,10 @@ const Login = () => {
                 </h2>
                 <p className="mt-2 text-center text-sm text-gray-200 font-sans">
                     {t.or}{' '}
-                    <Link to="/signup" className="font-medium text-red-400 hover:text-red-300 transition-colors duration-200">
+                    <Link
+                        to={`/signup${role ? `?role=${role}` : ''}`}
+                        className="font-medium text-red-400 hover:text-red-300 transition-colors duration-200"
+                    >
                         {t.createAccount}
                     </Link>
                 </p>
@@ -86,16 +99,16 @@ const Login = () => {
                             </div>
                         )}
                         <div>
-                            <label htmlFor="username" className="block text-sm font-medium text-gray-700 font-sans">
-                                {t.username}
+                            <label htmlFor="email" className="block text-sm font-medium text-gray-700 font-sans">
+                                {t.email}
                             </label>
                             <div className="mt-1">
                                 <input
-                                    id="username"
-                                    name="username"
-                                    type="text"
+                                    id="email"
+                                    name="email"
+                                    type="email"
                                     required
-                                    value={formData.username}
+                                    value={formData.email}
                                     onChange={handleChange}
                                     className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm transition duration-200"
                                 />

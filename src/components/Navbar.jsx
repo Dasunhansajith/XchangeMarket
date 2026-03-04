@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
 
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
     const { language, toggleLanguage, t } = useLanguage();
+    const { user, logout, isAuthenticated } = useAuth();
+    const navigate = useNavigate();
 
     const [location, setLocation] = useState(null);
 
@@ -30,7 +33,10 @@ const Navbar = () => {
         }
     }, []);
 
-
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
+    };
 
     return (
         <nav className="bg-white/90 backdrop-blur-md sticky top-0 z-50 border-b border-gray-100 transition-all duration-300">
@@ -75,17 +81,38 @@ const Navbar = () => {
                             <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-red-600 transition-all duration-300 group-hover:w-full"></span>
                         </Link>
 
+                        {(user?.role === 'ADMIN' || user?.role === 'ROLE_ADMIN' || user?.roles?.includes('ROLE_ADMIN')) && (
+                            <Link to="/admin/dashboard" className="font-bold text-sm uppercase tracking-wide text-red-600 hover:text-red-700 transition duration-300 relative group">
+                                ADMIN PANEL
+                                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-red-600 transition-all duration-300 group-hover:w-full"></span>
+                            </Link>
+                        )}
+
                         <div className="h-6 w-px bg-gray-300 mx-2"></div>
 
-                        <Link to="/login" className="font-bold text-gray-700 hover:text-red-600 transition duration-300">
-                            {t.login}
-                        </Link>
-                        <Link to="/become-seller" className="px-6 py-2.5 rounded-full font-bold text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 transition-all duration-300 shadow-lg shadow-red-500/30 transform hover:scale-105 hover:-translate-y-0.5 flex items-center gap-2">
+                        {isAuthenticated ? (
+                            <div className="flex items-center space-x-4">
+                                <span className="text-sm font-bold text-gray-700">Hi, {user?.fullName || user?.name || 'User'}</span>
+                                <button
+                                    onClick={handleLogout}
+                                    className="font-bold text-sm uppercase tracking-wide text-gray-600 hover:text-red-600 transition duration-300 relative group"
+                                >
+                                    LOGOUT
+                                </button>
+                            </div>
+                        ) : (
+                            <Link to="/login" className="font-bold text-gray-700 hover:text-red-600 transition duration-300">
+                                {t.login}
+                            </Link>
+                        )}
+
+                        <Link
+                            to={isAuthenticated ? "/become-seller" : "/login?role=seller"}
+                            className="px-6 py-2.5 rounded-full font-bold text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 transition-all duration-300 shadow-lg shadow-red-500/30 transform hover:scale-105 hover:-translate-y-0.5 flex items-center gap-2"
+                        >
                             <span>{t.becomeSeller}</span>
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
                         </Link>
-
-
 
                         <button
                             onClick={toggleLanguage}
@@ -140,11 +167,32 @@ const Navbar = () => {
                     <Link to="/contact" className="text-lg font-bold text-gray-800 hover:text-red-600 transition-colors" onClick={() => setIsOpen(false)}>
                         {t.contact}
                     </Link>
+                    {(user?.role === 'ADMIN' || user?.role === 'ROLE_ADMIN' || user?.roles?.includes('ROLE_ADMIN')) && (
+                        <Link to="/admin/dashboard" className="text-lg font-bold text-red-600 hover:text-red-700 transition-colors" onClick={() => setIsOpen(false)}>
+                            ADMIN PANEL
+                        </Link>
+                    )}
                     <hr className="border-gray-100" />
-                    <Link to="/login" className="text-lg font-bold text-gray-800 hover:text-red-600 transition-colors" onClick={() => setIsOpen(false)}>
-                        {t.login}
-                    </Link>
-                    <Link to="/become-seller" className="w-full text-center px-6 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 transition-all shadow-lg" onClick={() => setIsOpen(false)}>
+                    {isAuthenticated ? (
+                        <>
+                            <div className="text-lg font-bold text-gray-700">Hi, {user?.fullName || user?.name || 'User'}</div>
+                            <button
+                                onClick={() => { handleLogout(); setIsOpen(false); }}
+                                className="text-left text-lg font-bold text-gray-800 hover:text-red-600 transition-colors"
+                            >
+                                LOGOUT
+                            </button>
+                        </>
+                    ) : (
+                        <Link to="/login" className="text-lg font-bold text-gray-800 hover:text-red-600 transition-colors" onClick={() => setIsOpen(false)}>
+                            {t.login}
+                        </Link>
+                    )}
+                    <Link
+                        to={isAuthenticated ? "/become-seller" : "/login?role=seller"}
+                        className="w-full text-center px-6 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 transition-all shadow-lg"
+                        onClick={() => setIsOpen(false)}
+                    >
                         {t.becomeSeller}
                     </Link>
                 </div>

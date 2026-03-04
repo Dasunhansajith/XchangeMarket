@@ -14,7 +14,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const storedToken = authHelpers.getToken();
     const storedUserInfo = authHelpers.getUserInfo();
-    
+
     if (storedToken && storedUserInfo) {
       setToken(storedToken);
       setUser(storedUserInfo);
@@ -28,16 +28,21 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       const response = await authAPI.signup(userData);
-      const { token, user } = response.data;
-      
-      authHelpers.setToken(token);
-      authHelpers.setUserInfo(user);
-      setToken(token);
-      setUser(user);
-      toast.success('Signup successful!');
-      return { success: true, data: response.data };
+      const token = response.data.token || response.data.accessToken;
+      const user = response.data.user || response.data;
+
+      if (token) {
+        authHelpers.setToken(token);
+        authHelpers.setUserInfo(user);
+        setToken(token);
+        setUser(user);
+        toast.success('Signup successful!');
+        return { success: true, data: response.data };
+      } else {
+        throw new Error('No token received from server');
+      }
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Signup failed';
+      const errorMessage = err.response?.data?.message || err.response?.data?.error || err.message || 'Signup failed';
       setError(errorMessage);
       toast.error(errorMessage);
       return { success: false, error: errorMessage };
@@ -52,16 +57,21 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       const response = await authAPI.login(credentials);
-      const { token, user } = response.data;
-      
-      authHelpers.setToken(token);
-      authHelpers.setUserInfo(user);
-      setToken(token);
-      setUser(user);
-      toast.success('Login successful!');
-      return { success: true, data: response.data };
+      const token = response.data.token || response.data.accessToken;
+      const user = response.data.user || response.data;
+
+      if (token) {
+        authHelpers.setToken(token);
+        authHelpers.setUserInfo(user);
+        setToken(token);
+        setUser(user);
+        toast.success('Login successful!');
+        return { success: true, data: response.data };
+      } else {
+        throw new Error('Invalid credentials or no token received');
+      }
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Login failed';
+      const errorMessage = err.response?.data?.message || err.response?.data?.error || err.message || 'Login failed';
       setError(errorMessage);
       toast.error(errorMessage);
       return { success: false, error: errorMessage };
@@ -85,7 +95,7 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       const response = await userAPI.getCurrentProfile();
       const userData = response.data;
-      
+
       authHelpers.setUserInfo(userData);
       setUser(userData);
       return { success: true, data: userData };
@@ -104,7 +114,7 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       const response = await userAPI.updateProfile(userData);
       const updatedUser = response.data;
-      
+
       authHelpers.setUserInfo(updatedUser);
       setUser(updatedUser);
       toast.success('Profile updated successfully!');

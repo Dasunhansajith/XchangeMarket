@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
@@ -8,11 +8,18 @@ const Signup = () => {
     const { t } = useLanguage();
     const { signup, loading, error } = useAuth();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+
+    // Detect role from URL query param, default to 'buyer'
+    const roleParam = searchParams.get('role');
+    const targetRole = roleParam === 'seller' ? 'seller' : 'buyer';
+
     const [formData, setFormData] = useState({
         name: '',
         address: '',
-        telephone: '',
-        nic: '',
+        phone: '',
+        email: '',
+        nicNumber: '',
         password: '',
         confirmPassword: ''
     });
@@ -32,7 +39,7 @@ const Signup = () => {
         setLocalError(null);
 
         // Validation
-        if (!formData.name || !formData.address || !formData.telephone || !formData.nic || !formData.password) {
+        if (!formData.name || !formData.address || !formData.phone || !formData.email || !formData.nicNumber || !formData.password) {
             setLocalError("Please fill in all fields");
             return;
         }
@@ -50,10 +57,12 @@ const Signup = () => {
         const result = await signup({
             name: formData.name,
             address: formData.address,
-            telephone: formData.telephone,
-            nic: formData.nic,
+            phone: formData.phone,
+            nicNumber: formData.nicNumber,
+            email: formData.email,
             password: formData.password,
-            email: formData.telephone // Using telephone as email if no separate email field
+            confirmPassword: formData.confirmPassword,
+            roles: [targetRole]
         });
 
         if (result.success) {
@@ -145,16 +154,34 @@ const Signup = () => {
 
                         {/* Telephone Number */}
                         <div>
-                            <label htmlFor="telephone" className="block text-sm font-medium text-gray-700 font-sans">
+                            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 font-sans">
                                 {t.telephone}
                             </label>
                             <div className="mt-1">
                                 <input
-                                    id="telephone"
-                                    name="telephone"
+                                    id="phone"
+                                    name="phone"
                                     type="tel"
                                     required
-                                    value={formData.telephone}
+                                    value={formData.phone}
+                                    onChange={handleChange}
+                                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm transition duration-200"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Email Address */}
+                        <div>
+                            <label htmlFor="email" className="block text-sm font-medium text-gray-700 font-sans">
+                                {t.email}
+                            </label>
+                            <div className="mt-1">
+                                <input
+                                    id="email"
+                                    name="email"
+                                    type="email"
+                                    required
+                                    value={formData.email}
                                     onChange={handleChange}
                                     className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm transition duration-200"
                                 />
@@ -163,16 +190,16 @@ const Signup = () => {
 
                         {/* NIC Number */}
                         <div>
-                            <label htmlFor="nic" className="block text-sm font-medium text-gray-700 font-sans">
+                            <label htmlFor="nicNumber" className="block text-sm font-medium text-gray-700 font-sans">
                                 {t.nicNumber}
                             </label>
                             <div className="mt-1">
                                 <input
-                                    id="nic"
-                                    name="nic"
+                                    id="nicNumber"
+                                    name="nicNumber"
                                     type="text"
                                     required
-                                    value={formData.nic}
+                                    value={formData.nicNumber}
                                     onChange={handleChange}
                                     className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm transition duration-200"
                                 />
