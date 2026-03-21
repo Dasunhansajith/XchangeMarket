@@ -3,9 +3,10 @@ import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useWishlist } from '../context/WishlistContext';
 import peoplesBankLogo from '../assets/peoplesbank.png';
 
-const CheckoutModal = ({ isOpen, onClose, product, priceRaw, contactNumber }) => {
+export const CheckoutModal = ({ isOpen, onClose, product, priceRaw, contactNumber }) => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const [step, setStep] = useState(1); // 1: Shipping, 2: Payment/Review
@@ -28,7 +29,7 @@ const CheckoutModal = ({ isOpen, onClose, product, priceRaw, contactNumber }) =>
                 // If fields are empty, autofill from user profile
                 const newName = !prev.name.trim() ? (user.fullName || user.name || '') : prev.name;
                 const newAddress = !prev.address.trim() ? (user.address || '') : prev.address;
-                
+
                 return {
                     ...prev,
                     name: newName,
@@ -301,6 +302,20 @@ const VehicleCard = ({
     // Combine single image prop into the array if no images array is provided
     const sliderImages = images.length > 0 ? images : [image || "https://images.unsplash.com/photo-1619682817481-e994891cd1f5?q=80&w=2574&auto=format&fit=crop"];
 
+    // Wishlist
+    const { toggleWishlist, isInWishlist } = useWishlist();
+    const wishlistProduct = {
+        id: title,
+        title,
+        name: title,
+        price,
+        image: sliderImages[0],
+        seller,
+        location,
+        contactNumber,
+    };
+    const isWishlisted = isInWishlist(wishlistProduct);
+
     // State for the card's internal slider (preview)
     const [previewIndex, setPreviewIndex] = useState(0);
 
@@ -394,6 +409,23 @@ const VehicleCard = ({
                             ))}
                         </div>
                     )}
+
+                    {/* Wishlist Heart Button */}
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            toggleWishlist(wishlistProduct);
+                        }}
+                        className={`absolute top-3 left-3 z-20 p-2 rounded-full backdrop-blur-md shadow-lg transition-all duration-300 transform hover:scale-110 active:scale-90 ${
+                            isWishlisted
+                                ? 'bg-rose-500 text-white shadow-rose-500/40'
+                                : 'bg-white/80 text-gray-500 hover:text-rose-500 hover:bg-white'
+                        }`}
+                    >
+                        <svg className="w-5 h-5" fill={isWishlisted ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24" strokeWidth={isWishlisted ? '0' : '2'}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                        </svg>
+                    </button>
 
                     <div className="absolute top-3 right-3 bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-lg z-10 uppercase tracking-widest">
                         {badgeText}

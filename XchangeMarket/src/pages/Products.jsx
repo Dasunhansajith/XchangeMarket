@@ -9,7 +9,7 @@ const CATEGORIES = ['All', 'Mobiles', 'Vehicles', 'Electronics', 'Property', 'Ho
 const Products = () => {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
-    
+
     // Filtering states
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('All');
@@ -37,8 +37,8 @@ const Products = () => {
     const filteredProducts = useMemo(() => {
         return products.filter((product) => {
             const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
-            const matchesSearch = product.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                                  product.description?.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesSearch = product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                product.description?.toLowerCase().includes(searchQuery.toLowerCase());
             return matchesCategory && matchesSearch;
         });
     }, [products, searchQuery, selectedCategory]);
@@ -85,11 +85,10 @@ const Products = () => {
                                 <button
                                     key={category}
                                     onClick={() => setSelectedCategory(category)}
-                                    className={`whitespace-nowrap px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-300 ${
-                                        selectedCategory === category
-                                            ? 'bg-white text-red-600 shadow-sm'
-                                            : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
-                                    }`}
+                                    className={`whitespace-nowrap px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-300 ${selectedCategory === category
+                                        ? 'bg-white text-red-600 shadow-sm'
+                                        : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
+                                        }`}
                                 >
                                     {category}
                                 </button>
@@ -104,7 +103,7 @@ const Products = () => {
                         <p className="text-gray-500 font-medium animate-pulse">Loading products...</p>
                     </div>
                 ) : filteredProducts.length === 0 ? (
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         className="flex flex-col items-center justify-center h-80 bg-white rounded-3xl shadow-sm border border-gray-100 p-8 text-center"
@@ -112,7 +111,7 @@ const Products = () => {
                         <FaSearch className="text-7xl mb-4 text-gray-200" />
                         <h3 className="text-2xl font-bold text-gray-800">No matches found</h3>
                         <p className="text-gray-500 mt-2 max-w-md">We couldn't find any products matching "{searchQuery}" in the {selectedCategory} category. Try adjusting your search or filters.</p>
-                        <button 
+                        <button
                             onClick={() => { setSearchQuery(''); setSelectedCategory('All'); }}
                             className="mt-6 px-6 py-2 bg-red-50 text-red-600 font-bold rounded-lg hover:bg-red-100 transition-colors"
                         >
