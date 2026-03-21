@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 import { motion } from 'framer-motion';
-
 const Signup = () => {
     const { t } = useLanguage();
     const { signup, loading, error } = useAuth();
+    const { addNotification } = useNotifications();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
 
@@ -40,17 +41,23 @@ const Signup = () => {
 
         // Validation
         if (!formData.name || !formData.address || !formData.phone || !formData.email || !formData.nicNumber || !formData.password) {
-            setLocalError("Please fill in all fields");
+            const msg = "Please fill in all fields";
+            setLocalError(msg);
+            // toast.error(msg); // Removed
             return;
         }
 
         if (formData.password !== formData.confirmPassword) {
-            setLocalError("Passwords do not match!");
+            const msg = "Passwords do not match!";
+            setLocalError(msg);
+            // toast.error(msg); // Removed
             return;
         }
 
         if (formData.password.length < 6) {
-            setLocalError("Password must be at least 6 characters long");
+            const msg = "Password must be at least 6 characters long";
+            setLocalError(msg);
+            // toast.error(msg); // Removed
             return;
         }
 
@@ -66,9 +73,12 @@ const Signup = () => {
         });
 
         if (result.success) {
-            navigate('/');
+            addNotification("Account created successfully! Welcome to Xchange Market.");
+            navigate('/login');
         } else {
-            setLocalError(result.error || 'Signup failed');
+            const errorMsg = result.error || 'Signup failed';
+            setLocalError(errorMsg);
+            // toast.error(errorMsg); // Removed
         }
     };
 

@@ -17,6 +17,7 @@ import { ProtectedRoute, AdminRoute } from './components/ProtectedRoute';
 import FloatingWishlistButton from './components/FloatingWishlistButton';
 
 
+import { Toaster } from 'react-hot-toast';
 import CategoryGrid from './components/CategoryGrid';
 import AdSlider from './components/AdSlider';
 import AppDownloadCard from './components/AppDownloadCard';
@@ -84,52 +85,61 @@ const Home = () => {
 };
 // ...existing code...
 
+import { NotificationProvider } from './context/NotificationContext';
+
+
 function App() {
   return (
     <Router>
       <AuthProvider>
-        <WishlistProvider>
-          <LanguageProvider>
-            <Navbar />
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/products" element={<Products />} />
-              <Route path="/about" element={<AboutUs />} />
-              <Route path="/contact" element={<ContactUs />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route
-                path="/become-seller"
-                element={
-                  <ProtectedRoute>
-                    <BecomeSeller />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/dashboard"
-                element={
-                  <AdminRoute>
-                    <AdminDashboard />
-                  </AdminRoute>
-                }
-              />
-              <Route
-                path="/seller-dashboard"
-                element={
-                  <ProtectedRoute>
-                    <SellerDashboard />
-                  </ProtectedRoute>
-                }
-              />
-            </Routes>
-            <Footer />
-            <FloatingWishlistButton />
-          </LanguageProvider>
-        </WishlistProvider>
+        <NotificationProvider>
+          <WishlistProvider>
+            <LanguageProvider>
+              <Navbar />
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/products" element={<Products />} />
+                <Route path="/about" element={<AboutUs />} />
+                <Route path="/contact" element={<ContactUs />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route
+                  path="/become-seller"
+                  element={
+                    <ProtectedRoute>
+                      <BecomeSeller />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/dashboard"
+                  element={
+                    <AdminRoute>
+                      <AdminDashboard />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/seller-dashboard"
+                  element={
+                    <ProtectedRoute>
+                      <SellerDashboard />
+                    </ProtectedRoute>
+                  }
+                />
+              </Routes>
+              <Footer />
+              <FloatingWishlistButton />
+              <Toaster position="top-center" reverseOrder={false} />
+            </LanguageProvider>
+          </WishlistProvider>
+        </NotificationProvider>
       </AuthProvider>
     </Router>
   );
 }
+
+
+
 
 export default App
