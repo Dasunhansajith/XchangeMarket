@@ -1,20 +1,15 @@
 import React, { useState } from 'react';
-
 import { Link, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const [isLocationOpen, setIsLocationOpen] = useState(false);
 
-    // Dummy notifications data
-    const [notifications, setNotifications] = useState([
-        { id: 1, text: "Your order for BMW 520d is confirmed.", time: "10 mins ago", unread: true },
-        { id: 2, text: "New message from seller Dasun Cars.", time: "1 hour ago", unread: true },
-        { id: 3, text: "Price dropped for Apple Watch SE 3!", time: "2 days ago", unread: false }
-    ]);
+    const { notifications, markAsRead, markAllAsRead } = useNotifications();
 
     const { language, toggleLanguage, t } = useLanguage();
     const { user, logout, isAuthenticated } = useAuth();
@@ -130,15 +125,27 @@ const Navbar = () => {
                                         <div className="fixed inset-0 z-40" onClick={() => setIsNotificationOpen(false)}></div>
                                         <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden transform transition-all origin-top-right">
                                             <div className="p-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
-                                                <h3 className="font-bold text-gray-900">Notifications</h3>
-                                                <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">
-                                                    {notifications.filter(n => n.unread).length} New
-                                                </span>
+                                                <div className="flex items-center gap-2">
+                                                    <h3 className="font-bold text-gray-900">Notifications</h3>
+                                                    <span className="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">
+                                                        {notifications.filter(n => n.unread).length} New
+                                                    </span>
+                                                </div>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        markAllAsRead();
+                                                    }}
+                                                    className="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors disabled:text-gray-400 disabled:cursor-not-allowed"
+                                                    disabled={notifications.filter(n => n.unread).length === 0}
+                                                >
+                                                    Mark all read
+                                                </button>
                                             </div>
-                                            <div className="max-h-[350px] overflow-y-auto">
+                                            <div className="max-h-[400px] overflow-y-auto">
                                                 {notifications.length > 0 ? notifications.map(notif => (
                                                     <div key={notif.id} className={`p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer ${notif.unread ? 'bg-blue-50/20' : ''}`} onClick={() => {
-                                                        setNotifications(notifications.map(n => n.id === notif.id ? { ...n, unread: false } : n));
+                                                        markAsRead(notif.id);
                                                     }}>
                                                         <div className="flex gap-3">
                                                             <div className={`mt-1.5 h-2 w-2 rounded-full flex-shrink-0 ${notif.unread ? 'bg-red-500' : 'bg-transparent'}`}></div>
@@ -151,9 +158,6 @@ const Navbar = () => {
                                                 )) : (
                                                     <div className="p-6 text-center text-gray-500 text-sm">No new notifications</div>
                                                 )}
-                                            </div>
-                                            <div className="p-3 text-center border-t border-gray-100 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer text-sm font-semibold text-blue-600">
-                                                View All Notifications
                                             </div>
                                         </div>
                                     </>
@@ -215,26 +219,57 @@ const Navbar = () => {
                                 {isLocationOpen && (
                                     <>
                                         <div className="fixed inset-0 z-40" onClick={() => setIsLocationOpen(false)}></div>
-                                        <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden transform transition-all origin-top-right">
-                                            <div className="p-4 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                                                </svg>
-                                                <h3 className="font-bold text-gray-900 text-sm">Your Location</h3>
+                                        <div className="absolute right-0 mt-4 w-72 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden transform transition-all origin-top-right animate-in fade-in zoom-in duration-200">
+                                            <div className="p-4 bg-gradient-to-r from-gray-50 to-white border-b border-gray-100 flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="p-1.5 bg-red-100 rounded-lg text-red-600">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                                                        </svg>
+                                                    </div>
+                                                    <h3 className="font-bold text-gray-900 text-sm">{t.location || 'Location'}</h3>
+                                                </div>
+                                                <button
+                                                    onClick={() => window.location.reload()}
+                                                    className="p-1.5 hover:bg-gray-100 rounded-full text-gray-400 hover:text-red-500 transition-colors"
+                                                    title="Refresh Location"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                    </svg>
+                                                </button>
                                             </div>
                                             <div className="p-6 text-center">
                                                 {location && location !== "Loc: N/A" ? (
-                                                    <div>
-                                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1.5">Detected Area</p>
-                                                        <p className="text-lg font-black text-blue-900 uppercase tracking-wider">{location}</p>
+                                                    <div className="space-y-2">
+                                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Currently In</p>
+                                                        <p className="text-xl font-black text-blue-900 uppercase tracking-tight">{location}</p>
+                                                        <div className="pt-2">
+                                                            <span className="inline-flex items-center px-2 py-1 rounded-md bg-green-50 text-[10px] font-bold text-green-600 uppercase tracking-tighter">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 mr-1.5 animate-pulse"></span>
+                                                                Live Access
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                 ) : (
-                                                    <p className="text-xs text-gray-500 leading-relaxed font-medium">Location not available. Please allow browser location access.</p>
+                                                    <div className="space-y-4">
+                                                        <div className="flex justify-center">
+                                                            <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center text-gray-300">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                                                </svg>
+                                                            </div>
+                                                        </div>
+                                                        <p className="text-xs text-gray-500 leading-relaxed font-semibold px-2">
+                                                            Location access is blocked. Please enable it in your browser settings to see nearby deals.
+                                                        </p>
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
                                     </>
                                 )}
+
                             </div>
                         </div>
                     </div>
@@ -283,7 +318,6 @@ const Navbar = () => {
                             )}
                         </div>
 
-                        {/* Mobile Notification Icon */}
                         <div className="relative">
                             <button
                                 onClick={() => setIsNotificationOpen(!isNotificationOpen)}
@@ -297,6 +331,49 @@ const Navbar = () => {
                                     </span>
                                 )}
                             </button>
+
+                            {isNotificationOpen && (
+                                <>
+                                    <div className="fixed inset-0 z-40" onClick={() => setIsNotificationOpen(false)}></div>
+                                    <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden transform transition-all origin-top-right">
+                                        <div className="p-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
+                                            <div className="flex items-center gap-2">
+                                                <h3 className="font-bold text-gray-900">Notifications</h3>
+                                                <span className="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">
+                                                    {notifications.filter(n => n.unread).length} New
+                                                </span>
+                                            </div>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    markAllAsRead();
+                                                }}
+                                                className="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors disabled:text-gray-400 disabled:cursor-not-allowed"
+                                                disabled={notifications.filter(n => n.unread).length === 0}
+                                            >
+                                                Mark all read
+                                            </button>
+                                        </div>
+                                        <div className="max-h-[400px] overflow-y-auto">
+                                            {notifications.length > 0 ? notifications.map(notif => (
+                                                <div key={notif.id} className={`p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer ${notif.unread ? 'bg-blue-50/20' : ''}`} onClick={() => {
+                                                    markAsRead(notif.id);
+                                                }}>
+                                                    <div className="flex gap-3">
+                                                        <div className={`mt-1.5 h-2 w-2 rounded-full flex-shrink-0 ${notif.unread ? 'bg-red-500' : 'bg-transparent'}`}></div>
+                                                        <div>
+                                                            <p className={`text-sm leading-snug ${notif.unread ? 'text-gray-900 font-semibold' : 'text-gray-600'}`}>{notif.text}</p>
+                                                            <p className="text-xs text-gray-400 mt-1.5">{notif.time}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )) : (
+                                                <div className="p-6 text-center text-gray-500 text-sm">No new notifications</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
                         </div>
 
                         <button

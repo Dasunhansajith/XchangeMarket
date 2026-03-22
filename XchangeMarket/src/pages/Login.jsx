@@ -2,11 +2,14 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 import { motion } from 'framer-motion';
+import { toast } from 'react-hot-toast';
 
 const Login = () => {
     const { t } = useLanguage();
     const { login, loading, error } = useAuth();
+    const { addNotification } = useNotifications();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const role = searchParams.get('role');
@@ -31,6 +34,7 @@ const Login = () => {
 
         if (!formData.email || !formData.password) {
             setLocalError('Please fill in all fields');
+            toast.error('Please fill in all fields');
             return;
         }
 
@@ -45,6 +49,9 @@ const Login = () => {
             const isSeller = user.role === 'seller' || user.role === 'ROLE_SELLER' || user.roles?.includes('seller') || user.roles?.includes('ROLE_SELLER');
             const hasShop = user.hasShop || user.shopId || user.shopRegistered;
 
+            // toast.success(`Welcome back, ${user.username || 'User'}!`); // Removed as requested
+            addNotification(`You have successfully logged in as ${user.username || 'User'}.`);
+
             if (isAdmin) {
                 navigate('/admin/dashboard');
             } else if (isSeller && hasShop) {
@@ -53,7 +60,9 @@ const Login = () => {
                 navigate('/');
             }
         } else {
-            setLocalError(result.error || 'Login failed');
+            const errorMsg = result.error || 'Login failed';
+            setLocalError(errorMsg);
+            toast.error(errorMsg);
         }
     };
 

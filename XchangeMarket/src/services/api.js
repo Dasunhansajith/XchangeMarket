@@ -167,6 +167,36 @@ export const adminAPI = {
     apiWithPrefix.get('/admin/hello'),
 };
 
+// ============ ORDER ENDPOINTS ============
+export const orderAPI = {
+  placeOrder: (orderData) =>
+    apiWithPrefix.post('/orders/place', orderData),
+
+  getMyOrders: () =>
+    apiWithPrefix.get('/orders/me'),
+
+  getSellerOrders: () =>
+    apiWithPrefix.get('/orders/seller'),
+
+  acceptOrder: (orderId) =>
+    apiWithPrefix.post(`/orders/${orderId}/accept`),
+
+  declineOrder: (orderId) =>
+    apiWithPrefix.post(`/orders/${orderId}/decline`),
+};
+
+// ============ NOTIFICATION ENDPOINTS ============
+export const notificationAPI = {
+  getMyNotifications: () =>
+    apiWithPrefix.get('/notifications'),
+
+  getUnreadCount: () =>
+    apiWithPrefix.get('/notifications/unread-count'),
+
+  markAsRead: (id) =>
+    apiWithPrefix.post(`/notifications/${id}/read`),
+};
+
 // ============ AUTH HELPERS ============
 export const authHelpers = {
   setToken: (token) => {

@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaBox, FaPlus, FaChartLine, FaEdit, FaTrash, FaUpload, FaStore, FaMoneyBillWave, FaSpinner, FaExclamationTriangle } from 'react-icons/fa';
-import { productAPI } from '../services/api';
+import { productAPI, orderAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
+import { FaBox, FaPlus, FaChartLine, FaEdit, FaTrash, FaUpload, FaStore, FaMoneyBillWave, FaSpinner, FaExclamationTriangle, FaCheck, FaTimes, FaClipboardList } from 'react-icons/fa';
 
 const SellerDashboard = () => {
     const { user } = useAuth();
     const [activeTab, setActiveTab] = useState('dashboard');
     const [products, setProducts] = useState([]);
+    const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [ordersLoading, setOrdersLoading] = useState(false);
     const [error, setError] = useState(null);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
@@ -72,9 +74,45 @@ const SellerDashboard = () => {
         }
     }, []);
 
+    const fetchOrders = useCallback(async () => {
+        try {
+            setOrdersLoading(true);
+            console.log("Fetching orders for seller...");
+            const response = await orderAPI.getSellerOrders();
+            console.log("Orders response received:", response.data);
+            setOrders(Array.isArray(response.data) ? response.data : []);
+        } catch (err) {
+            console.error('Error fetching orders:', err);
+            toast.error('Failed to load orders');
+        } finally {
+            setOrdersLoading(false);
+        }
+    }, [orderAPI]);
+
     useEffect(() => {
         fetchMyProducts();
-    }, [fetchMyProducts]);
+        fetchOrders();
+    }, [fetchMyProducts, fetchOrders]);
+
+    const handleAcceptOrder = async (orderId) => {
+        try {
+            await orderAPI.acceptOrder(orderId);
+            toast.success('Order accepted successfully!');
+            fetchOrders();
+        } catch (err) {
+            toast.error('Failed to accept order');
+        }
+    };
+
+    const handleDeclineOrder = async (orderId) => {
+        try {
+            await orderAPI.declineOrder(orderId);
+            toast.success('Order declined');
+            fetchOrders();
+        } catch (err) {
+            toast.error('Failed to decline order');
+        }
+    };
 
     const handleAddProductClick = (e) => {
         e.preventDefault();
@@ -143,47 +181,101 @@ const SellerDashboard = () => {
         }
     };
 
-    const renderDashboardOverview = () => (
-        <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-800">Store Overview</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <motion.div whileHover={{ scale: 1.02 }} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4">
-                    <div className="p-3 bg-blue-100 text-blue-600 rounded-lg">
-                        <FaBox className="text-xl" />
-                    </div>
-                    <div>
-                        <p className="text-gray-500 text-sm">Total Products</p>
-                        <h3 className="text-2xl font-bold text-gray-800">{products.length}</h3>
-                    </div>
-                </motion.div>
+    const renderDashboardOverview = () => {
+        const totalRevenue = orders
+            .filter(order => order.status !== 'DECLINED')
+            .reduce((sum, order) => sum + (order.totalPrice || 0), 0);
 
-                <motion.div whileHover={{ scale: 1.02 }} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4">
-                    <div className="p-3 bg-green-100 text-green-600 rounded-lg">
-                        <FaMoneyBillWave className="text-xl" />
-                    </div>
-                    <div>
-                        <p className="text-gray-500 text-sm">Total Revenue</p>
-                        <h3 className="text-2xl font-bold text-gray-800">Rs 1.2M</h3>
-                    </div>
-                </motion.div>
+        return (
+            <div className="space-y-6">
+                <h2 className="text-2xl font-bold text-gray-800">Store Overview</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <motion.div whileHover={{ scale: 1.02 }} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4">
+                        <div className="p-3 bg-blue-100 text-blue-600 rounded-lg">
+                            <FaBox className="text-xl" />
+                        </div>
+                        <div>
+                            <p className="text-gray-500 text-sm">Total Products</p>
+                            <h3 className="text-2xl font-bold text-gray-800">{products.length}</h3>
+                        </div>
+                    </motion.div>
 
-                <motion.div whileHover={{ scale: 1.02 }} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4">
-                    <div className="p-3 bg-purple-100 text-purple-600 rounded-lg">
-                        <FaChartLine className="text-xl" />
-                    </div>
-                    <div>
-                        <p className="text-gray-500 text-sm">Store Views</p>
-                        <h3 className="text-2xl font-bold text-gray-800">2,435</h3>
-                    </div>
-                </motion.div>
-            </div>
+                    <motion.div whileHover={{ scale: 1.02 }} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center space-x-4">
+                        <div className="p-3 bg-green-100 text-green-600 rounded-lg">
+                            <FaMoneyBillWave className="text-xl" />
+                        </div>
+                        <div>
+                            <p className="text-gray-500 text-sm">Total Revenue</p>
+                            <h3 className="text-2xl font-bold text-gray-800">Rs {totalRevenue.toLocaleString()}</h3>
+                        </div>
+                    </motion.div>
+                </div>
 
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mt-8">
-                <h3 className="text-lg font-bold text-gray-800 mb-4">Recent Activity</h3>
-                <p className="text-gray-500 text-sm">You haven't had any recent sales. Add more products to increase visibility!</p>
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-lg font-bold text-gray-800">Recent Activity (Orders)</h3>
+                    <button onClick={() => setActiveTab('orders')} className="text-red-600 text-sm font-semibold hover:underline">View All Orders</button>
+                </div>
+                
+                {ordersLoading ? (
+                    <div className="flex justify-center py-8"><FaSpinner className="animate-spin text-red-600" /></div>
+                ) : orders.length === 0 ? (
+                    <p className="text-gray-500 text-sm py-4">You haven't had any recent sales. Add more products to increase visibility!</p>
+                ) : (
+                    <div className="space-y-4">
+                        {orders.slice(0, 5).map(order => (
+                            <div key={order.id} className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100 gap-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center border border-gray-200 text-red-600">
+                                        <FaClipboardList />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-bold text-gray-800 text-sm">Order #{order.id.slice(-6)}</h4>
+                                        <p className="text-gray-500 text-xs">{order.items?.[0]?.name} (Qty: {order.items?.[0]?.quantity})</p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                                                order.status === 'PENDING' ? 'bg-yellow-100 text-yellow-600' :
+                                                order.status === 'ACCEPTED' ? 'bg-green-100 text-green-600' :
+                                                'bg-red-100 text-red-600'
+                                            }`}>
+                                                {order.status}
+                                            </span>
+                                            <span className="text-gray-400 text-[10px]">{new Date(order.createdAt).toLocaleDateString()}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex items-center gap-2">
+                                    <div className="text-right mr-4 hidden md:block">
+                                        <p className="text-xs text-gray-400">Total Amount</p>
+                                        <p className="font-bold text-gray-800 text-sm">Rs {order.totalPrice?.toLocaleString()}</p>
+                                    </div>
+                                    
+                                    {order.status === 'PENDING' && (
+                                        <>
+                                            <button 
+                                                onClick={() => handleAcceptOrder(order.id)}
+                                                className="p-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors flex items-center gap-2 text-xs font-bold"
+                                            >
+                                                <FaCheck /> Accept
+                                            </button>
+                                            <button 
+                                                onClick={() => handleDeclineOrder(order.id)}
+                                                className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors flex items-center gap-2 text-xs font-bold"
+                                            >
+                                                <FaTimes /> Decline
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     );
+};
 
     const renderManageProducts = () => (
         <div className="space-y-6">
@@ -253,6 +345,83 @@ const SellerDashboard = () => {
                         )}
                     </tbody>
                 </table>
+            </div>
+        </div>
+    );
+
+    const renderOrders = () => (
+        <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-gray-800">Manage Orders</h2>
+            
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <table className="w-full text-left border-collapse">
+                    <thead>
+                        <tr className="bg-gray-50 border-b border-gray-100">
+                            <th className="px-6 py-4 font-semibold text-gray-700 text-sm uppercase">Order Details</th>
+                            <th className="px-6 py-4 font-semibold text-gray-700 text-sm uppercase">Customer</th>
+                            <th className="px-6 py-4 font-semibold text-gray-700 text-sm uppercase">Shipping Address</th>
+                            <th className="px-6 py-4 font-semibold text-gray-700 text-sm uppercase">Total</th>
+                            <th className="px-6 py-4 font-semibold text-gray-700 text-sm uppercase">Status</th>
+                            <th className="px-6 py-4 font-semibold text-gray-700 text-sm uppercase">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {orders.map((order) => (
+                            <tr key={order.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition">
+                                <td className="px-6 py-4">
+                                    <div className="font-bold text-gray-800 text-sm">#{order.id.slice(-8)}</div>
+                                    <div className="text-xs text-gray-500">{order.items?.[0]?.name}...</div>
+                                    <div className="text-[10px] text-gray-400 mt-1">{new Date(order.createdAt).toLocaleString()}</div>
+                                </td>
+                                <td className="px-6 py-4">
+                                    <div className="text-sm font-medium text-gray-800">{order.buyerName || 'Guest'}</div>
+                                    <div className="text-xs text-gray-500">{order.buyerPhone || order.buyerId}</div>
+                                </td>
+                                <td className="px-6 py-4">
+                                    <div className="text-xs text-gray-600 max-w-[150px] line-clamp-2">{order.shippingAddress}</div>
+                                </td>
+                                <td className="px-6 py-4 text-gray-800 font-bold text-sm">Rs {order.totalPrice?.toLocaleString()}</td>
+                                <td className="px-6 py-4">
+                                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${
+                                        order.status === 'PENDING' ? 'bg-yellow-100 text-yellow-600' :
+                                        order.status === 'ACCEPTED' ? 'bg-green-100 text-green-600' :
+                                        'bg-red-100 text-red-600'
+                                    }`}>
+                                        {order.status}
+                                    </span>
+                                </td>
+                                <td className="px-6 py-4 text-center">
+                                    {order.status === 'PENDING' ? (
+                                        <div className="flex gap-2">
+                                            <button 
+                                                onClick={() => handleAcceptOrder(order.id)}
+                                                className="p-1.5 bg-green-500 text-white rounded hover:bg-green-600 transition" 
+                                                title="Accept"
+                                            >
+                                                <FaCheck size={12} />
+                                            </button>
+                                            <button 
+                                                onClick={() => handleDeclineOrder(order.id)}
+                                                className="p-1.5 bg-red-500 text-white rounded hover:bg-red-600 transition" 
+                                                title="Decline"
+                                            >
+                                                <FaTimes size={12} />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <span className="text-xs text-gray-400 font-medium font-bold uppercase">{order.status}</span>
+                                    )}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+                {!ordersLoading && orders.length === 0 && (
+                    <div className="py-20 text-center text-gray-500">
+                        <FaClipboardList className="text-5xl mx-auto mb-4 opacity-10" />
+                        <p>No orders yet. Keep up the good work!</p>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -476,6 +645,13 @@ const SellerDashboard = () => {
                             </button>
 
                             <button
+                                onClick={() => setActiveTab('orders')}
+                                className={`w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 transition-colors ${activeTab === 'orders' ? 'bg-red-50 text-red-600 font-semibold' : 'text-gray-600 hover:bg-gray-50'}`}
+                            >
+                                <FaClipboardList /> Manage Orders
+                            </button>
+
+                            <button
                                 onClick={() => setActiveTab('add')}
                                 className={`w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 transition-colors ${activeTab === 'add' ? 'bg-red-50 text-red-600 font-semibold' : 'text-gray-600 hover:bg-gray-50'}`}
                             >
@@ -494,6 +670,7 @@ const SellerDashboard = () => {
                         >
                             {activeTab === 'dashboard' && renderDashboardOverview()}
                             {activeTab === 'manage' && renderManageProducts()}
+                            {activeTab === 'orders' && renderOrders()}
                             {activeTab === 'add' && renderAddProduct()}
                         </motion.div>
                     </div>

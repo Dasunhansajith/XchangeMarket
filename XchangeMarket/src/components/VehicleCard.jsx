@@ -4,9 +4,10 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useWishlist } from '../context/WishlistContext';
+import { orderAPI } from '../services/api';
 import peoplesBankLogo from '../assets/peoplesbank.png';
 
-export const CheckoutModal = ({ isOpen, onClose, product, priceRaw, contactNumber }) => {
+export const CheckoutModal = ({ isOpen, onClose, product, priceRaw, contactNumber, stockQuantity }) => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const [step, setStep] = useState(1); // 1: Shipping, 2: Payment/Review
@@ -59,13 +60,27 @@ export const CheckoutModal = ({ isOpen, onClose, product, priceRaw, contactNumbe
         });
     };
 
-    const handleBuy = () => {
+    const handleBuy = async () => {
         const token = localStorage.getItem('authToken');
         if (!token) {
             navigate('/login');
         } else {
-            alert(`Order Placed Successfully! Total: Rs ${total.toLocaleString()}`);
-            onClose();
+            try {
+                const orderData = {
+                    productId: product.id,
+                    quantity: quantity,
+                    shippingAddress: `${shippingDetails.address}, ${shippingDetails.zip}, ${shippingDetails.district}`,
+                    buyerName: shippingDetails.name,
+                    buyerPhone: user?.phone || contactNumber // Fallback if no user phone
+                };
+
+                await orderAPI.placeOrder(orderData);
+                alert(`Order Placed Successfully! Total: Rs ${total.toLocaleString()}`);
+                onClose();
+            } catch (error) {
+                console.error('Error placing order:', error);
+                alert('Failed to place order. Please try again.');
+            }
         }
     };
 
@@ -92,20 +107,33 @@ export const CheckoutModal = ({ isOpen, onClose, product, priceRaw, contactNumbe
                         </div>
 
                         {/* Quantity Controls */}
-                        <div className="flex items-center gap-3 bg-white px-3 py-1 rounded-lg border border-gray-200 shadow-sm">
-                            <button
-                                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                                className="w-6 h-6 flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded-full transition-colors font-bold"
-                            >
-                                -
-                            </button>
-                            <span className="font-bold text-sm min-w-[20px] text-center">{quantity}</span>
-                            <button
-                                onClick={() => setQuantity(quantity + 1)}
-                                className="w-6 h-6 flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded-full transition-colors font-bold"
-                            >
-                                +
-                            </button>
+                        <div className="flex flex-col items-end gap-1">
+                            <div className="flex items-center gap-3 bg-white px-3 py-1 rounded-lg border border-gray-200 shadow-sm">
+                                <button
+                                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                                    className="w-6 h-6 flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded-full transition-colors font-bold"
+                                >
+                                    -
+                                </button>
+                                <span className="font-bold text-sm min-w-[20px] text-center">{quantity}</span>
+                                <button
+                                    onClick={() => {
+                                        if (quantity < stockQuantity) {
+                                            setQuantity(quantity + 1);
+                                        }
+                                    }}
+                                    disabled={quantity >= stockQuantity}
+                                    className={`w-6 h-6 flex items-center justify-center rounded-full transition-colors font-bold ${quantity >= stockQuantity
+                                        ? 'text-gray-300 cursor-not-allowed'
+                                        : 'text-gray-500 hover:bg-gray-100'
+                                        }`}
+                                >
+                                    +
+                                </button>
+                            </div>
+                            {quantity >= stockQuantity && (
+                                <span className="text-[10px] text-red-500 font-bold animate-pulse">Max stock reached</span>
+                            )}
                         </div>
                     </div>
 
@@ -286,10 +314,10 @@ export const CheckoutModal = ({ isOpen, onClose, product, priceRaw, contactNumbe
 };
 
 const VehicleCard = ({
+    id,
     image,
     images = [],
     title,
-    mileage,
     seller,
     price = "Price Negotiable",
     location = "Colombo, Sri Lanka",
@@ -297,7 +325,8 @@ const VehicleCard = ({
     description = [],
     contactNumber = "94766414622",
     offerPercentage = "0%",
-    badgeText = "New Arrival"
+    badgeText = "New Arrival",
+    stockQuantity = 1
 }) => {
     // Combine single image prop into the array if no images array is provided
     const sliderImages = images.length > 0 ? images : [image || "https://images.unsplash.com/photo-1619682817481-e994891cd1f5?q=80&w=2574&auto=format&fit=crop"];
@@ -329,6 +358,9 @@ const VehicleCard = ({
     const [isGalleryOpen, setIsGalleryOpen] = useState(false);
     const [galleryIndex, setGalleryIndex] = useState(0);
 
+    // State for Phone Number Popup
+    const [isPhonePopupOpen, setIsPhonePopupOpen] = useState(false);
+
     // Auto-advance the card preview slider
     useEffect(() => {
         if (sliderImages.length <= 1) return;
@@ -342,7 +374,7 @@ const VehicleCard = ({
 
     // Prevent body scroll when any modal is open
     useEffect(() => {
-        if (isModalOpen || isGalleryOpen || isCheckoutOpen) {
+        if (isModalOpen || isGalleryOpen || isCheckoutOpen || isPhonePopupOpen) {
             document.body.style.overflow = 'hidden';
         } else {
             document.body.style.overflow = 'unset';
@@ -352,7 +384,7 @@ const VehicleCard = ({
         return () => {
             document.body.style.overflow = 'unset';
         };
-    }, [isModalOpen, isGalleryOpen, isCheckoutOpen]);
+    }, [isModalOpen, isGalleryOpen, isCheckoutOpen, isPhonePopupOpen]);
 
     const handleWhatsAppClick = () => {
         const message = `Hi, I'm interested in the ${title} listed on Xchange.`;
@@ -374,7 +406,7 @@ const VehicleCard = ({
         setGalleryIndex((prev) => (prev - 1 + sliderImages.length) % sliderImages.length);
     };
 
-    const isTechItem = !mileage || mileage === "N/A";
+    const isTechItem = badgeText !== "Vehicles" && badgeText !== "Property";
 
     return (
         <>
@@ -416,19 +448,18 @@ const VehicleCard = ({
                             e.stopPropagation();
                             toggleWishlist(wishlistProduct);
                         }}
-                        className={`absolute top-3 left-3 z-20 p-2 rounded-full backdrop-blur-md shadow-lg transition-all duration-300 transform hover:scale-110 active:scale-90 ${
-                            isWishlisted
-                                ? 'bg-rose-500 text-white shadow-rose-500/40'
-                                : 'bg-white/80 text-gray-500 hover:text-rose-500 hover:bg-white'
-                        }`}
+                        className={`absolute top-3 left-3 z-20 p-2 rounded-full backdrop-blur-md shadow-lg transition-all duration-300 transform hover:scale-110 active:scale-90 ${isWishlisted
+                            ? 'bg-rose-500 text-white shadow-rose-500/40'
+                            : 'bg-white/80 text-gray-500 hover:text-rose-500 hover:bg-white'
+                            }`}
                     >
                         <svg className="w-5 h-5" fill={isWishlisted ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24" strokeWidth={isWishlisted ? '0' : '2'}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                         </svg>
                     </button>
 
-                    <div className="absolute top-3 right-3 bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-lg z-10 uppercase tracking-widest">
-                        {badgeText}
+                    <div className={`absolute top-3 right-3 ${offerPercentage === 'Unavailable' ? 'bg-gray-500' : 'bg-red-600'} text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-lg z-10 uppercase tracking-widest`}>
+                        {offerPercentage === 'Unavailable' ? 'Sold Out' : badgeText}
                     </div>
 
                     <div className="absolute bottom-3 right-3 z-10">
@@ -459,17 +490,8 @@ const VehicleCard = ({
 
                     <div className="grid grid-cols-2 gap-3 text-sm mb-4">
                         <div className="bg-gray-50 p-2 rounded-lg border border-gray-100 flex flex-col items-center justify-center text-center">
-                            {mileage && mileage !== "N/A" ? (
-                                <>
-                                    <span className="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Mileage</span>
-                                    <span className="font-bold text-gray-800">{mileage}</span>
-                                </>
-                            ) : (
-                                <>
-                                    <span className="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Offer</span>
-                                    <span className="font-bold text-green-600">{offerPercentage}</span>
-                                </>
-                            )}
+                            <span className="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Status</span>
+                            <span className={`font-bold ${offerPercentage === 'Unavailable' ? 'text-red-600' : 'text-green-600'}`}>{offerPercentage}</span>
                         </div>
                         <div className="bg-gray-50 p-2 rounded-lg border border-gray-100 flex flex-col items-center justify-center text-center">
                             <span className="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Seller</span>
@@ -482,7 +504,7 @@ const VehicleCard = ({
                             <span className="text-xs text-gray-400 font-medium">Price</span>
                             <span className="text-xl font-extrabold text-gray-900 tracking-tight">{price}</span>
                         </div>
-                        <button className="bg-gray-900 text-white p-2.5 rounded-full hover:bg-red-600 transition-all duration-300 shadow-md group-hover:scale-110">
+                        <button className={`${offerPercentage === 'Unavailable' ? 'bg-gray-300' : 'bg-gray-900 hover:bg-red-600'} text-white p-2.5 rounded-full transition-all duration-300 shadow-md group-hover:scale-110`}>
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                             </svg>
@@ -560,10 +582,6 @@ const VehicleCard = ({
                                     {Object.keys(specifications).length === 0 && (
                                         <>
                                             <div className="flex border-b border-gray-100 pb-2">
-                                                <span className="text-gray-500 w-1/3 text-sm">Mileage:</span>
-                                                <span className="text-gray-900 font-medium w-2/3 text-sm">{mileage}</span>
-                                            </div>
-                                            <div className="flex border-b border-gray-100 pb-2">
                                                 <span className="text-gray-500 w-1/3 text-sm">Seller:</span>
                                                 <span className="text-gray-900 font-medium w-2/3 text-sm">{seller}</span>
                                             </div>
@@ -586,25 +604,82 @@ const VehicleCard = ({
                                 {isTechItem ? (
                                     <button
                                         onClick={() => {
+                                            if (offerPercentage === 'Unavailable') return;
                                             setIsModalOpen(false); // Close details
                                             setIsCheckoutOpen(true); // Open checkout
                                         }}
-                                        className="w-full bg-black hover:bg-gray-800 text-white font-bold py-3 px-6 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-gray-200"
+                                        disabled={offerPercentage === 'Unavailable'}
+                                        className={`w-full font-bold py-3 px-6 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg transition-all duration-300 ${offerPercentage === 'Unavailable'
+                                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none border border-gray-100'
+                                            : 'bg-black hover:bg-gray-800 text-white shadow-gray-200 transform hover:-translate-y-0.5'
+                                            }`}
                                     >
                                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
-                                        Buy Now
+                                        {offerPercentage === 'Unavailable' ? 'Currently Sold Out' : 'Buy Now'}
                                     </button>
                                 ) : (
-                                    <button
-                                        onClick={handleWhatsAppClick}
-                                        className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-lg shadow-green-500/20"
-                                    >
-                                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z" />
-                                        </svg>
-                                        Contact via WhatsApp
-                                    </button>
+                                    <div className="space-y-3">
+                                        <button
+                                            onClick={handleWhatsAppClick}
+                                            className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-lg shadow-green-500/20"
+                                        >
+                                            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                                                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z" />
+                                            </svg>
+                                            Contact via WhatsApp
+                                        </button>
+                                        <button
+                                            onClick={() => setIsPhonePopupOpen(true)}
+                                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
+                                        >
+                                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                            </svg>
+                                            Call Now
+                                        </button>
+                                    </div>
                                 )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                , document.body)}
+
+            {/* Phone Number Popup */}
+            {isPhonePopupOpen && createPortal(
+                <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsPhonePopupOpen(false)}>
+                    <div
+                        className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="p-8 text-center">
+                            <div className="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                </svg>
+                            </div>
+                            <h3 className="text-2xl font-black text-gray-900 mb-2">Contact Seller</h3>
+                            <p className="text-gray-500 mb-6">Call the shop directly at the number below</p>
+
+                            <div className="bg-gray-50 rounded-2xl p-5 mb-8 border border-gray-100">
+                                <span className="text-3xl font-black text-blue-600 tracking-wider">
+                                    {contactNumber}
+                                </span>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <button
+                                    onClick={() => setIsPhonePopupOpen(false)}
+                                    className="w-full bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-4 px-6 rounded-2xl transition-all"
+                                >
+                                    Close
+                                </button>
+                                <a
+                                    href={`tel:${contactNumber}`}
+                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-2xl transition-all shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2"
+                                >
+                                    Call Now
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -615,9 +690,10 @@ const VehicleCard = ({
             <CheckoutModal
                 isOpen={isCheckoutOpen}
                 onClose={() => setIsCheckoutOpen(false)}
-                product={{ title, image: sliderImages[0] }}
+                product={{ id, title, image: sliderImages[0] }}
                 priceRaw={price}
                 contactNumber={contactNumber}
+                stockQuantity={stockQuantity}
             />
 
             {/* Full Screen Image Gallery */}

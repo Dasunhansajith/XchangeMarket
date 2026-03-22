@@ -3,8 +3,9 @@ import { productAPI } from '../services/api';
 import VehicleCard from '../components/VehicleCard';
 import { FaSpinner, FaBoxOpen, FaSearch, FaFilter } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
+import { categories } from '../components/CategoryGrid';
 
-const CATEGORIES = ['All', 'Mobiles', 'Vehicles', 'Electronics', 'Property', 'Home', 'Fashion'];
+const CATEGORIES = ['All', 'Mobiles', 'Vehicles', 'Electronics', 'Property', 'Fashion'];
 
 const Products = () => {
     const [products, setProducts] = useState([]);
@@ -43,11 +44,13 @@ const Products = () => {
         });
     }, [products, searchQuery, selectedCategory]);
 
-    // Extract dynamic categories from products in case they added custom ones (Optional enhancement)
+    // Extract dynamic categories from products and ensure all are represented
     const availableCategories = useMemo(() => {
         const dynamicCats = new Set(products.map(p => p.category).filter(Boolean));
         const combinedCats = new Set([...CATEGORIES, ...dynamicCats]);
-        return Array.from(combinedCats);
+        const sortedCats = Array.from(combinedCats).sort((a, b) => a.localeCompare(b));
+        // Always keep 'All' at the beginning
+        return ['All', ...sortedCats.filter(c => c !== 'All')];
     }, [products]);
 
     return (
@@ -64,8 +67,8 @@ const Products = () => {
 
                 {/* Filter & Search Section */}
                 <div className="mb-10 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-6 items-center justify-between">
-                    {/* Search Bar */}
-                    <div className="relative w-full md:w-1/2 group">
+                    {/* Search Bar - More compact */}
+                    <div className="relative w-full md:w-1/3 group">
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                             <FaSearch className="text-gray-400 group-focus-within:text-red-500 transition-colors" />
                         </div>
@@ -78,21 +81,60 @@ const Products = () => {
                         />
                     </div>
 
-                    {/* Category Tabs */}
-                    <div className="w-full md:w-auto overflow-x-auto pb-2 md:pb-0 scrollbar-hide flex items-center gap-2">
-                        <div className="flex bg-gray-100 p-1 rounded-xl">
-                            {availableCategories.slice(0, 6).map((category) => (
-                                <button
-                                    key={category}
-                                    onClick={() => setSelectedCategory(category)}
-                                    className={`whitespace-nowrap px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-300 ${selectedCategory === category
-                                        ? 'bg-white text-red-600 shadow-sm'
-                                        : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
-                                        }`}
-                                >
-                                    {category}
-                                </button>
-                            ))}
+                    {/* Category Tabs Container - Wider to fill space */}
+                    <div className="w-full md:w-2/3 relative overflow-hidden">
+                        {/* Gradient Masks for fading effect at edges */}
+                        <div className="absolute top-0 left-0 w-12 h-full bg-gradient-to-r from-white to-transparent z-10 pointer-events-none"></div>
+                        <div className="absolute top-0 right-0 w-12 h-full bg-gradient-to-l from-white to-transparent z-10 pointer-events-none"></div>
+
+                        <div className="overflow-x-auto pb-4 pt-1 px-4 flex items-center gap-3 scroll-smooth custom-scrollbar">
+                            <motion.button
+                                whileHover={{ scale: 1.05, y: -2 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => setSelectedCategory('All')}
+                                className={`relative flex-shrink-0 flex items-center p-3 px-6 rounded-2xl border transition-all duration-300 group ${selectedCategory === 'All'
+                                    ? 'border-red-500 bg-white shadow-lg ring-1 ring-red-500/20'
+                                    : 'border-gray-100 bg-white shadow-sm hover:shadow-md hover:border-red-200'
+                                    }`}
+                            >
+                                <div className={`p-2 rounded-full mr-3 transition-colors ${selectedCategory === 'All' ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-500 group-hover:bg-red-50 group-hover:text-red-500'}`}>
+                                    <FaBoxOpen className="w-4 h-4" />
+                                </div>
+                                <span className={`font-bold text-sm whitespace-nowrap ${selectedCategory === 'All' ? 'text-red-600' : 'text-gray-700 group-hover:text-red-600'}`}>
+                                    All Products
+                                </span>
+                            </motion.button>
+
+                            {availableCategories.filter(cat => cat !== 'All').map((category) => {
+                                // Find icon and color data from CategoryGrid
+                                const categoryData = categories.find(c => c.name === category);
+                                const Icon = categoryData?.icon || FaFilter;
+                                const colorClass = categoryData?.color || 'text-gray-400';
+                                const bgClass = categoryData?.bg || 'bg-gray-100';
+
+                                return (
+                                    <motion.button
+                                        key={category}
+                                        whileHover={{ scale: 1.05, y: -2 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        onClick={() => setSelectedCategory(category)}
+                                        className={`relative flex-shrink-0 flex items-center p-3 px-6 rounded-2xl border transition-all duration-300 group ${selectedCategory === category
+                                            ? 'border-red-500 bg-white shadow-lg ring-1 ring-red-500/20'
+                                            : 'border-gray-100 bg-white shadow-sm hover:shadow-md hover:border-red-200'
+                                            }`}
+                                    >
+                                        <div className={`p-2 rounded-full mr-3 transition-colors ${selectedCategory === category
+                                            ? 'bg-red-500 text-white shadow-sm'
+                                            : `${bgClass} ${colorClass} group-hover:bg-red-50 group-hover:text-red-500`
+                                            }`}>
+                                            <Icon className="w-4 h-4" />
+                                        </div>
+                                        <span className={`font-bold text-sm whitespace-nowrap ${selectedCategory === category ? 'text-red-600' : 'text-gray-700 group-hover:text-red-600'}`}>
+                                            {category}
+                                        </span>
+                                    </motion.button>
+                                );
+                            })}
                         </div>
                     </div>
                 </div>
@@ -159,6 +201,7 @@ const Products = () => {
                                         transition={{ duration: 0.3 }}
                                     >
                                         <VehicleCard
+                                            id={product.id}
                                             title={product.name}
                                             seller={product.shopId ? `Shop #${product.shopId}` : "Trusted Seller"}
                                             price={`Rs ${safePrice.toLocaleString()}`}
@@ -166,8 +209,9 @@ const Products = () => {
                                             images={safeImages.length > 0 ? safeImages : []}
                                             badgeText={product.category || "New Arrival"}
                                             description={product.description ? product.description.toString().split('\n') : ["No description available."]}
-                                            mileage={product.category === 'Vehicles' ? 'Used' : 'N/A'}
-                                            offerPercentage={product.stockQuantity > 0 ? 'In Stock' : 'Out of Stock'}
+                                            offerPercentage={product.stockQuantity > 0 ? 'Available' : 'Unavailable'}
+                                            stockQuantity={product.stockQuantity}
+                                            contactNumber={product.contactNumber || product.sellerPhone || "94766414622"}
                                         />
                                     </motion.div>
                                 );
