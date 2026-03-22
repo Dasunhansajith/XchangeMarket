@@ -24,12 +24,21 @@ const Footer = () => {
                             {t.footerDesc}
                         </p>
 
-                        {/* Digexa Logo (Powered By) */}
+                        {/* Powered By Section */}
                         <div className="pt-4 border-t border-gray-800">
-                            <p className="text-[10px] text-gray-500 mb-2 uppercase tracking-widest font-black text-left">Design & Dev By</p>
-                            <a href="https://digexa.vercel.app/" target="_blank" rel="noopener noreferrer" className="inline-block hover:opacity-80 transition-all hover:scale-105">
-                                <img src={digexaLogo} alt="Digexa" className="h-10 w-auto" />
-                            </a>
+                            <p className="text-[10px] text-gray-500 mb-2 uppercase tracking-widest font-black text-left">Powered By</p>
+                            <div className="flex items-center gap-6">
+                                <a href="https://digexa.vercel.app/" target="_blank" rel="noopener noreferrer" className="inline-block hover:opacity-80 transition-all hover:scale-105">
+                                    <img src={digexaLogo} alt="Digexa" className="h-8 w-auto" />
+                                </a>
+                                <div className="w-px h-6 bg-gray-700"></div> {/* Separator */}
+                                <div className="inline-block transition-all hover:scale-105 select-none">
+                                    <span className="text-xl font-black tracking-tight drop-shadow-sm">
+                                        <span className="text-white">Grid</span>
+                                        <span className="text-red-500">X</span>
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                         <div className="flex space-x-4 pt-2">
                             <a href="#" className="text-gray-400 hover:text-white transition-colors duration-300">

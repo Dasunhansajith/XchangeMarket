@@ -21,7 +21,7 @@ export const WishlistProvider = ({ children }) => {
       localStorage.setItem('xchange_wishlist', JSON.stringify(wishlistItems));
     }
   }, [wishlistItems, user]);
-  
+
   // Clear wishlist when user logs out
   useEffect(() => {
     if (!loading && !user) {

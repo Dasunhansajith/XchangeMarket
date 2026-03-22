@@ -5,7 +5,7 @@ import { FaSpinner, FaBoxOpen, FaSearch, FaFilter } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { categories } from '../components/CategoryGrid';
 
-const CATEGORIES = ['All', 'Mobiles', 'Vehicles', 'Electronics', 'Property', 'Home', 'Fashion'];
+const CATEGORIES = ['All', 'Mobiles', 'Vehicles', 'Electronics', 'Property', 'Fashion'];
 
 const Products = () => {
     const [products, setProducts] = useState([]);
@@ -201,6 +201,7 @@ const Products = () => {
                                         transition={{ duration: 0.3 }}
                                     >
                                         <VehicleCard
+                                            id={product.id}
                                             title={product.name}
                                             seller={product.shopId ? `Shop #${product.shopId}` : "Trusted Seller"}
                                             price={`Rs ${safePrice.toLocaleString()}`}
@@ -208,8 +209,9 @@ const Products = () => {
                                             images={safeImages.length > 0 ? safeImages : []}
                                             badgeText={product.category || "New Arrival"}
                                             description={product.description ? product.description.toString().split('\n') : ["No description available."]}
-                                            mileage={product.category === 'Vehicles' ? 'Used' : 'N/A'}
-                                            offerPercentage={product.stockQuantity > 0 ? 'In Stock' : 'Out of Stock'}
+                                            offerPercentage={product.stockQuantity > 0 ? 'Available' : 'Unavailable'}
+                                            stockQuantity={product.stockQuantity}
+                                            contactNumber={product.contactNumber || product.sellerPhone || "94766414622"}
                                         />
                                     </motion.div>
                                 );

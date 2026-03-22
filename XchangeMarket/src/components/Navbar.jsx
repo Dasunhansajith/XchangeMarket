@@ -9,7 +9,7 @@ const Navbar = () => {
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const [isLocationOpen, setIsLocationOpen] = useState(false);
 
-    const { notifications, markAsRead } = useNotifications();
+    const { notifications, markAsRead, markAllAsRead } = useNotifications();
 
     const { language, toggleLanguage, t } = useLanguage();
     const { user, logout, isAuthenticated } = useAuth();
@@ -125,12 +125,24 @@ const Navbar = () => {
                                         <div className="fixed inset-0 z-40" onClick={() => setIsNotificationOpen(false)}></div>
                                         <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden transform transition-all origin-top-right">
                                             <div className="p-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
-                                                <h3 className="font-bold text-gray-900">Notifications</h3>
-                                                <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">
-                                                    {notifications.filter(n => n.unread).length} New
-                                                </span>
+                                                <div className="flex items-center gap-2">
+                                                    <h3 className="font-bold text-gray-900">Notifications</h3>
+                                                    <span className="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">
+                                                        {notifications.filter(n => n.unread).length} New
+                                                    </span>
+                                                </div>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        markAllAsRead();
+                                                    }}
+                                                    className="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors disabled:text-gray-400 disabled:cursor-not-allowed"
+                                                    disabled={notifications.filter(n => n.unread).length === 0}
+                                                >
+                                                    Mark all read
+                                                </button>
                                             </div>
-                                            <div className="max-h-[350px] overflow-y-auto">
+                                            <div className="max-h-[400px] overflow-y-auto">
                                                 {notifications.length > 0 ? notifications.map(notif => (
                                                     <div key={notif.id} className={`p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer ${notif.unread ? 'bg-blue-50/20' : ''}`} onClick={() => {
                                                         markAsRead(notif.id);
@@ -146,9 +158,6 @@ const Navbar = () => {
                                                 )) : (
                                                     <div className="p-6 text-center text-gray-500 text-sm">No new notifications</div>
                                                 )}
-                                            </div>
-                                            <div className="p-3 text-center border-t border-gray-100 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer text-sm font-semibold text-blue-600">
-                                                View All Notifications
                                             </div>
                                         </div>
                                     </>
@@ -220,8 +229,8 @@ const Navbar = () => {
                                                     </div>
                                                     <h3 className="font-bold text-gray-900 text-sm">{t.location || 'Location'}</h3>
                                                 </div>
-                                                <button 
-                                                    onClick={() => window.location.reload()} 
+                                                <button
+                                                    onClick={() => window.location.reload()}
                                                     className="p-1.5 hover:bg-gray-100 rounded-full text-gray-400 hover:text-red-500 transition-colors"
                                                     title="Refresh Location"
                                                 >
@@ -309,7 +318,6 @@ const Navbar = () => {
                             )}
                         </div>
 
-                        {/* Mobile Notification Icon */}
                         <div className="relative">
                             <button
                                 onClick={() => setIsNotificationOpen(!isNotificationOpen)}
@@ -323,6 +331,49 @@ const Navbar = () => {
                                     </span>
                                 )}
                             </button>
+
+                            {isNotificationOpen && (
+                                <>
+                                    <div className="fixed inset-0 z-40" onClick={() => setIsNotificationOpen(false)}></div>
+                                    <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden transform transition-all origin-top-right">
+                                        <div className="p-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
+                                            <div className="flex items-center gap-2">
+                                                <h3 className="font-bold text-gray-900">Notifications</h3>
+                                                <span className="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">
+                                                    {notifications.filter(n => n.unread).length} New
+                                                </span>
+                                            </div>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    markAllAsRead();
+                                                }}
+                                                className="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors disabled:text-gray-400 disabled:cursor-not-allowed"
+                                                disabled={notifications.filter(n => n.unread).length === 0}
+                                            >
+                                                Mark all read
+                                            </button>
+                                        </div>
+                                        <div className="max-h-[400px] overflow-y-auto">
+                                            {notifications.length > 0 ? notifications.map(notif => (
+                                                <div key={notif.id} className={`p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer ${notif.unread ? 'bg-blue-50/20' : ''}`} onClick={() => {
+                                                    markAsRead(notif.id);
+                                                }}>
+                                                    <div className="flex gap-3">
+                                                        <div className={`mt-1.5 h-2 w-2 rounded-full flex-shrink-0 ${notif.unread ? 'bg-red-500' : 'bg-transparent'}`}></div>
+                                                        <div>
+                                                            <p className={`text-sm leading-snug ${notif.unread ? 'text-gray-900 font-semibold' : 'text-gray-600'}`}>{notif.text}</p>
+                                                            <p className="text-xs text-gray-400 mt-1.5">{notif.time}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )) : (
+                                                <div className="p-6 text-center text-gray-500 text-sm">No new notifications</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
                         </div>
 
                         <button
