@@ -197,6 +197,29 @@ export const notificationAPI = {
     apiWithPrefix.post(`/notifications/${id}/read`),
 };
 
+// ============ PAYMENT ENDPOINTS ============
+export const paymentAPI = {
+  // Get all available payment methods
+  getPaymentMethods: () =>
+    apiWithPrefix.get('/payments/methods'),
+
+  // Check if a specific payment method is available
+  checkPaymentMethodAvailable: (paymentMethod) =>
+    apiWithPrefix.get(`/payments/methods/${paymentMethod}/available`),
+
+  // Process payment using any payment method
+  processPayment: (paymentData) =>
+    apiWithPrefix.post('/payments/process', paymentData),
+
+  // Convenience endpoint for Stripe payments (creates Checkout Session)
+  processStripePayment: (paymentData) =>
+    apiWithPrefix.post('/payments/stripe', paymentData),
+
+  // Verify Stripe Checkout Session (called after payment redirect)
+  verifyCheckoutSession: (sessionId) =>
+    apiWithPrefix.post('/payments/stripe/verify', { session_id: sessionId }),
+};
+
 // ============ AUTH HELPERS ============
 export const authHelpers = {
   setToken: (token) => {

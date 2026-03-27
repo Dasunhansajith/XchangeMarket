@@ -4,7 +4,8 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useWishlist } from '../context/WishlistContext';
-import { orderAPI } from '../services/api';
+import { orderAPI, paymentAPI } from '../services/api';
+import StripeCheckoutButton from './StripeCheckoutButton';
 import peoplesBankLogo from '../assets/peoplesbank.png';
 
 export const CheckoutModal = ({ isOpen, onClose, product, priceRaw, contactNumber, stockQuantity }) => {
@@ -42,6 +43,7 @@ export const CheckoutModal = ({ isOpen, onClose, product, priceRaw, contactNumbe
 
     const [deliveryFee, setDeliveryFee] = useState(450);
     const [paymentMethod, setPaymentMethod] = useState('cod');
+    const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
     useEffect(() => {
         if (shippingDetails.district === 'Colombo') {
@@ -64,25 +66,43 @@ export const CheckoutModal = ({ isOpen, onClose, product, priceRaw, contactNumbe
         const token = localStorage.getItem('authToken');
         if (!token) {
             navigate('/login');
-        } else {
-            try {
-                const orderData = {
-                    productId: product.id,
-                    quantity: quantity,
-                    shippingAddress: `${shippingDetails.address}, ${shippingDetails.zip}, ${shippingDetails.district}`,
-                    buyerName: shippingDetails.name,
-                    buyerPhone: user?.phone || contactNumber // Fallback if no user phone
-                };
+            return;
+        }
 
-                await orderAPI.placeOrder(orderData);
-                alert(`Order Placed Successfully! Total: Rs ${total.toLocaleString()}`);
-                onClose();
-            } catch (error) {
-                console.error('Error placing order:', error);
-                alert('Failed to place order. Please try again.');
-            }
+        if (paymentMethod === 'stripe') {
+            // For Stripe Checkout, the StripeCheckoutButton will handle the redirect
+            // User will be taken to Stripe's hosted payment page
+            return;
+        }
+
+        // For COD and Bank Transfer, proceed directly
+        try {
+            setIsProcessingPayment(true);
+            const orderData = {
+                productId: product.id,
+                quantity: quantity,
+                shippingAddress: `${shippingDetails.address}, ${shippingDetails.zip}, ${shippingDetails.district}`,
+                buyerName: shippingDetails.name,
+                buyerPhone: user?.phone || contactNumber,
+                paymentMethod: paymentMethod === 'online' ? 'BANK_TRANSFER' : 'CASH_ON_DELIVERY'
+            };
+
+            await orderAPI.placeOrder(orderData);
+            alert(`Order Placed Successfully! Total: Rs ${total.toLocaleString()}`);
+            onClose();
+        } catch (error) {
+            console.error('Error placing order:', error);
+            alert('Failed to place order. Please try again.');
+        } finally {
+            setIsProcessingPayment(false);
         }
     };
+
+    /**
+     * Stripe Checkout handles payment on their hosted page
+     * User will be redirected back to success/cancel pages
+     * Order creation will happen on the success page
+     */
 
     if (!isOpen) return null;
 
@@ -187,41 +207,104 @@ export const CheckoutModal = ({ isOpen, onClose, product, priceRaw, contactNumbe
                             Payment Method
                         </h4>
                         <div className="space-y-2">
-                            <div className="flex items-center p-3 border border-gray-100 rounded-lg bg-gray-50 opacity-50 cursor-not-allowed">
-                                <input type="radio" disabled className="text-gray-400" />
-                                <span className="ml-3 text-sm font-medium text-gray-500">Card Payment (Unavailable)</span>
+                            {/* Stripe Payment */}
+                            <div
+                                onClick={() => {
+                                    setPaymentMethod('stripe');
+                                    setStripePaymentInitiated(false);
+                                }}
+                                className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${paymentMethod === 'stripe' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-purple-200'}`}
+                            >
+                                <input
+                                    type="radio"
+                                    name="payment"
+                                    checked={paymentMethod === 'stripe'}
+                                    onChange={() => {
+                                        setPaymentMethod('stripe');
+                                        setStripePaymentInitiated(false);
+                                    }}
+                                    className="text-purple-600 focus:ring-purple-500"
+                                />
+                                <span className="ml-3 text-sm font-medium text-gray-900 flex items-center gap-2">
+                                    💳 Stripe Card Payment
+                                    <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">NEW</span>
+                                </span>
                             </div>
 
+                            {/* Bank Transfer */}
                             <div
-                                onClick={() => setPaymentMethod('online')}
+                                onClick={() => {
+                                    setPaymentMethod('online');
+                                    setStripePaymentInitiated(false);
+                                }}
                                 className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${paymentMethod === 'online' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-200'}`}
                             >
                                 <input
                                     type="radio"
                                     name="payment"
                                     checked={paymentMethod === 'online'}
-                                    onChange={() => setPaymentMethod('online')}
+                                    onChange={() => {
+                                        setPaymentMethod('online');
+                                        setStripePaymentInitiated(false);
+                                    }}
                                     className="text-blue-600 focus:ring-blue-500"
                                 />
-                                <span className="ml-3 text-sm font-medium text-gray-900">Online Transfer</span>
+                                <span className="ml-3 text-sm font-medium text-gray-900">🏦 Online Transfer</span>
                             </div>
 
+                            {/* Cash On Delivery */}
                             <div
-                                onClick={() => setPaymentMethod('cod')}
+                                onClick={() => {
+                                    setPaymentMethod('cod');
+                                    setStripePaymentInitiated(false);
+                                }}
                                 className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${paymentMethod === 'cod' ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-green-200'}`}
                             >
                                 <input
                                     type="radio"
                                     name="payment"
                                     checked={paymentMethod === 'cod'}
-                                    onChange={() => setPaymentMethod('cod')}
+                                    onChange={() => {
+                                        setPaymentMethod('cod');
+                                        setStripePaymentInitiated(false);
+                                    }}
                                     className="text-green-600 focus:ring-green-500"
                                 />
-                                <span className="ml-3 text-sm font-medium text-gray-900">Cash On Delivery</span>
+                                <span className="ml-3 text-sm font-medium text-gray-900">📦 Cash On Delivery</span>
                             </div>
                         </div>
 
-                        {paymentMethod === 'online' && (
+                        {paymentMethod === 'stripe' && (
+                            <div className="mt-4 p-4 bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200 rounded-xl animate-in fade-in slide-in-from-top-2 duration-300">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
+                                        💳
+                                    </div>
+                                    <div>
+                                        <h5 className="font-bold text-gray-900 text-sm">Stripe Secure Payment</h5>
+                                        <p className="text-xs text-purple-600 font-medium">Redirected to Stripe's secure page</p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <StripeCheckoutButton
+                                        amount={total}
+                                        currency="LKR"
+                                        description={product.title}
+                                        email={user?.email}
+                                        orderId={product.id}
+                                        checkoutData={{
+                                            productId: product.id,
+                                            quantity: quantity,
+                                            shippingAddress: `${shippingDetails.address}, ${shippingDetails.zip}, ${shippingDetails.district}`,
+                                            buyerName: shippingDetails.name,
+                                            buyerPhone: user?.phone || contactNumber
+                                        }}
+                                        isProcessing={isProcessingPayment}
+                                    />
+                                </div>
+                            </div>
+                        )}
                             <div className="mt-4 p-4 bg-blue-50 border border-blue-100 rounded-xl animate-in fade-in slide-in-from-top-2 duration-300">
                                 <div className="flex items-center gap-4 mb-3">
                                     <div className="w-12 h-12 bg-white rounded-md p-1 shadow-sm flex items-center justify-center overflow-hidden">
@@ -298,10 +381,21 @@ export const CheckoutModal = ({ isOpen, onClose, product, priceRaw, contactNumbe
                 <div className="p-4 border-t border-gray-100 bg-gray-50">
                     <button
                         onClick={handleBuy}
-                        disabled={!shippingDetails.name || !shippingDetails.address}
-                        className="w-full bg-black hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg shadow-gray-200"
+                        disabled={!shippingDetails.name || !shippingDetails.address || isProcessingPayment || paymentMethod === 'stripe'}
+                        className="w-full bg-black hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg shadow-gray-200 flex items-center justify-center gap-2"
                     >
-                        Place Order
+                        {isProcessingPayment ? (
+                            <>
+                                <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                                </svg>
+                                Processing...
+                            </>
+                        ) : paymentMethod === 'stripe' ? (
+                            '⬆️ Click Stripe button above'
+                        ) : (
+                            'Place Order'
+                        )}
                     </button>
                     {(!shippingDetails.name || !shippingDetails.address) && (
                         <p className="text-xs text-center text-red-500 mt-2">Please fill in all details to proceed.</p>
