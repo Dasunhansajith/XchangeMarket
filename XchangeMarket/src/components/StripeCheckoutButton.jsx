@@ -63,7 +63,8 @@ export const StripeCheckoutButton = ({
         currency: currency.toUpperCase(),
         description: description,
         email: email,
-        orderId: orderId
+        orderId: orderId,
+        paymentMethod: "STRIPE"
       });
 
       if (!response.data.success) {
@@ -104,16 +105,6 @@ export const StripeCheckoutButton = ({
         </p>
       </div>
 
-      {/* Security Message */}
-      <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-        <p className="text-sm text-green-700 flex items-center gap-2">
-          <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
-          </svg>
-          🔒 Your card details are entered directly on Stripe's secure servers. We never see your card information.
-        </p>
-      </div>
-
       {/* Checkout Button */}
       <button
         type="button"
@@ -142,24 +133,6 @@ export const StripeCheckoutButton = ({
         )}
       </button>
 
-      {/* Accepted Payment Methods */}
-      <div className="pt-2 border-t border-gray-200">
-        <p className="text-xs text-gray-600 font-medium mb-2">Payment methods accepted:</p>
-        <div className="flex flex-wrap gap-2">
-          <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 rounded-full text-xs text-gray-700">
-            💳 Credit/Debit Card
-          </span>
-          <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 rounded-full text-xs text-gray-700">
-            🍎 Apple Pay
-          </span>
-          <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 rounded-full text-xs text-gray-700">
-            🔵 Google Pay
-          </span>
-          <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 rounded-full text-xs text-gray-700">
-            🌐 More...
-          </span>
-        </div>
-      </div>
     </div>
   );
 };

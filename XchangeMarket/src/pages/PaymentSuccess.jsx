@@ -59,16 +59,15 @@ export const PaymentSuccess = () => {
         console.log('Creating order with payment info...');
 
         const orderPayload = {
-          productId: metadata.order_id || checkoutData.productId,
+          productId: checkoutData.productId,
           quantity: checkoutData.quantity || 1,
           shippingAddress: checkoutData.shippingAddress,
           buyerName: checkoutData.buyerName,
           buyerPhone: checkoutData.buyerPhone,
-          paymentMethod: 'STRIPE',
-          transactionId: paymentInfo.payment_intent || sessionId,
-          paymentSessionId: sessionId
+          paymentMethod: 'STRIPE'
         };
 
+        console.log('Order payload:', orderPayload);
         const orderResponse = await orderAPI.placeOrder(orderPayload);
 
         if (orderResponse.data) {
@@ -87,8 +86,12 @@ export const PaymentSuccess = () => {
 
       } catch (err) {
         console.error('Error in payment verification:', err);
-        setError(err.message || 'An error occurred while processing your payment');
-        toast.error(err.message || 'Payment processing failed');
+        console.error('Full error response:', err.response?.data);
+        console.error('Error status:', err.response?.status);
+        
+        const errorMessage = err.response?.data?.message || err.message || 'An error occurred while processing your payment';
+        setError(errorMessage);
+        toast.error(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -219,31 +222,7 @@ export const PaymentSuccess = () => {
             </div>
           )}
 
-          {/* Key Points */}
-          <div className="space-y-2 bg-yellow-50 rounded-lg p-4">
-            <p className="text-sm text-gray-600 font-medium mb-2">Next Steps:</p>
-            <ul className="space-y-1 text-sm text-gray-700">
-              <li className="flex items-start gap-2">
-                <svg className="w-4 h-4 mt-0.5 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <span>Payment confirmed</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <svg className="w-4 h-4 mt-0.5 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <span>Order created successfully</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <svg className="w-4 h-4 mt-0.5 text-gray-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <span>Seller will contact you soon</span>
-              </li>
-            </ul>
-          </div>
-
+        
           {/* Action Buttons */}
           <div className="space-y-2 pt-4">
             <button

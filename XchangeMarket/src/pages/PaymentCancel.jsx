@@ -53,35 +53,6 @@ export const PaymentCancel = () => {
             <p className="text-sm text-orange-800 mt-2">You cancelled the payment on Stripe's checkout page. No charges were made to your card.</p>
           </div>
 
-          {/* Why This Might Happen */}
-          <div className="bg-blue-50 rounded-lg p-4">
-            <p className="text-sm text-gray-700 font-medium mb-2">Common reasons:</p>
-            <ul className="space-y-1 text-sm text-gray-700">
-              <li className="flex items-start gap-2">
-                <span className="text-blue-600 mt-0.5">•</span>
-                <span>You changed your mind about the purchase</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-blue-600 mt-0.5">•</span>
-                <span>Payment method issue or insufficient funds</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-blue-600 mt-0.5">•</span>
-                <span>Network connection interrupted</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-blue-600 mt-0.5">•</span>
-                <span>You wanted to review order details again</span>
-              </li>
-            </ul>
-          </div>
-
-          {/* Important Info */}
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <p className="text-xs font-medium text-gray-600 mb-2">💡 Important:</p>
-            <p className="text-xs text-gray-700">Your shopping cart and product selection have been saved. You can retry the payment whenever you're ready.</p>
-          </div>
-
           {/* Action Buttons */}
           <div className="space-y-2 pt-4">
             <button
@@ -102,16 +73,12 @@ export const PaymentCancel = () => {
           <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
             <p className="text-xs font-medium text-indigo-900 mb-2">🆘 Need Help?</p>
             <p className="text-xs text-indigo-800 mb-2">If you have any questions about this payment or your order, please contact us:</p>
-            <a href="mailto:support@xchange.com" className="text-xs text-indigo-600 hover:text-indigo-700 font-semibold underline">
-              support@xchange.com
+            <a href="mailto:xchangesrilanka@gmail.com" className="text-xs text-indigo-600 hover:text-indigo-700 font-semibold underline">
+              xchangesrilanka@gmail.com
             </a>
           </div>
         </div>
-
-        {/* Footer */}
-        <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 text-center text-xs text-gray-600">
-          <p>No charges have been made. You can return to your cart to continue shopping.</p>
-        </div>
+        
       </motion.div>
     </div>
   );

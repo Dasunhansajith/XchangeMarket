@@ -5,7 +5,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useWishlist } from '../context/WishlistContext';
 import { orderAPI, paymentAPI } from '../services/api';
-import StripeCheckoutButton from './StripeCheckoutButton';
 import peoplesBankLogo from '../assets/peoplesbank.png';
 
 export const CheckoutModal = ({ isOpen, onClose, product, priceRaw, contactNumber, stockQuantity }) => {
@@ -69,15 +68,52 @@ export const CheckoutModal = ({ isOpen, onClose, product, priceRaw, contactNumbe
             return;
         }
 
-        if (paymentMethod === 'stripe') {
-            // For Stripe Checkout, the StripeCheckoutButton will handle the redirect
-            // User will be taken to Stripe's hosted payment page
-            return;
-        }
+        setIsProcessingPayment(true);
 
-        // For COD and Bank Transfer, proceed directly
         try {
-            setIsProcessingPayment(true);
+            if (paymentMethod === 'stripe') {
+                // For Stripe Payment, save checkout data and redirect to Stripe
+                const checkoutData = {
+                    productId: product.id,
+                    quantity: quantity,
+                    shippingAddress: `${shippingDetails.address}, ${shippingDetails.zip}, ${shippingDetails.district}`,
+                    buyerName: shippingDetails.name,
+                    buyerPhone: user?.phone || contactNumber
+                };
+
+                // Save checkout data to localStorage for PaymentSuccess page
+                localStorage.setItem('checkoutData', JSON.stringify(checkoutData));
+                console.log('Saved checkout data to localStorage');
+
+                // Create Stripe Checkout Session
+                console.log('Creating Stripe Checkout Session...');
+                const response = await paymentAPI.processStripePayment({
+                    amount: parseFloat(total),
+                    currency: 'LKR',
+                    description: product.title,
+                    email: user?.email,
+                    orderId: product.id,
+                    paymentMethod: 'STRIPE'
+                });
+
+                if (!response.data.success) {
+                    localStorage.removeItem('checkoutData');
+                    throw new Error(response.data.message || 'Failed to create checkout session');
+                }
+
+                const { checkout_url } = response.data;
+
+                if (!checkout_url) {
+                    localStorage.removeItem('checkoutData');
+                    throw new Error('No checkout URL received from server');
+                }
+
+                console.log('Redirecting to Stripe Checkout...');
+                window.location.href = checkout_url;
+                return;
+            }
+
+            // For COD and Bank Transfer, proceed directly
             const orderData = {
                 productId: product.id,
                 quantity: quantity,
@@ -92,7 +128,7 @@ export const CheckoutModal = ({ isOpen, onClose, product, priceRaw, contactNumbe
             onClose();
         } catch (error) {
             console.error('Error placing order:', error);
-            alert('Failed to place order. Please try again.');
+            alert(error.response?.data?.message || error.message || 'Failed to place order. Please try again.');
         } finally {
             setIsProcessingPayment(false);
         }
@@ -226,8 +262,7 @@ export const CheckoutModal = ({ isOpen, onClose, product, priceRaw, contactNumbe
                                     className="text-purple-600 focus:ring-purple-500"
                                 />
                                 <span className="ml-3 text-sm font-medium text-gray-900 flex items-center gap-2">
-                                    💳 Stripe Card Payment
-                                    <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">NEW</span>
+                                    💳 Pay Online
                                 </span>
                             </div>
 
@@ -249,7 +284,7 @@ export const CheckoutModal = ({ isOpen, onClose, product, priceRaw, contactNumbe
                                     }}
                                     className="text-blue-600 focus:ring-blue-500"
                                 />
-                                <span className="ml-3 text-sm font-medium text-gray-900">🏦 Online Transfer</span>
+                                <span className="ml-3 text-sm font-medium text-gray-900">🏦 Bank Transfer</span>
                             </div>
 
                             {/* Cash On Delivery */}
@@ -274,37 +309,7 @@ export const CheckoutModal = ({ isOpen, onClose, product, priceRaw, contactNumbe
                             </div>
                         </div>
 
-                        {paymentMethod === 'stripe' && (
-                            <div className="mt-4 p-4 bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200 rounded-xl animate-in fade-in slide-in-from-top-2 duration-300">
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
-                                        💳
-                                    </div>
-                                    <div>
-                                        <h5 className="font-bold text-gray-900 text-sm">Stripe Secure Payment</h5>
-                                        <p className="text-xs text-purple-600 font-medium">Redirected to Stripe's secure page</p>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-3">
-                                    <StripeCheckoutButton
-                                        amount={total}
-                                        currency="LKR"
-                                        description={product.title}
-                                        email={user?.email}
-                                        orderId={product.id}
-                                        checkoutData={{
-                                            productId: product.id,
-                                            quantity: quantity,
-                                            shippingAddress: `${shippingDetails.address}, ${shippingDetails.zip}, ${shippingDetails.district}`,
-                                            buyerName: shippingDetails.name,
-                                            buyerPhone: user?.phone || contactNumber
-                                        }}
-                                        isProcessing={isProcessingPayment}
-                                    />
-                                </div>
-                            </div>
-                        )}
+                        {paymentMethod === 'online' && (
                             <div className="mt-4 p-4 bg-blue-50 border border-blue-100 rounded-xl animate-in fade-in slide-in-from-top-2 duration-300">
                                 <div className="flex items-center gap-4 mb-3">
                                     <div className="w-12 h-12 bg-white rounded-md p-1 shadow-sm flex items-center justify-center overflow-hidden">
@@ -381,7 +386,7 @@ export const CheckoutModal = ({ isOpen, onClose, product, priceRaw, contactNumbe
                 <div className="p-4 border-t border-gray-100 bg-gray-50">
                     <button
                         onClick={handleBuy}
-                        disabled={!shippingDetails.name || !shippingDetails.address || isProcessingPayment || paymentMethod === 'stripe'}
+                        disabled={!shippingDetails.name || !shippingDetails.address || isProcessingPayment}
                         className="w-full bg-black hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg shadow-gray-200 flex items-center justify-center gap-2"
                     >
                         {isProcessingPayment ? (
@@ -392,7 +397,7 @@ export const CheckoutModal = ({ isOpen, onClose, product, priceRaw, contactNumbe
                                 Processing...
                             </>
                         ) : paymentMethod === 'stripe' ? (
-                            '⬆️ Click Stripe button above'
+                            'Pay Online'
                         ) : (
                             'Place Order'
                         )}
