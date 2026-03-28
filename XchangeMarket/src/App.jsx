@@ -10,8 +10,7 @@ import ContactUs from './pages/ContactUs';
 import AdminDashboard from './pages/AdminDashboard';
 import SellerDashboard from './pages/SellerDashboard';
 import Products from './pages/Products';
-import PaymentSuccess from './pages/PaymentSuccess';
-import PaymentCancel from './pages/PaymentCancel';
+import AccountProfile from './pages/AccountProfile';
 import { LanguageProvider } from './context/LanguageContext';
 import { AuthProvider } from './context/AuthContext';
 import { WishlistProvider } from './context/WishlistContext';
@@ -128,6 +127,14 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <SellerDashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/account"
+                  element={
+                    <ProtectedRoute>
+                      <AccountProfile />
                     </ProtectedRoute>
                   }
                 />

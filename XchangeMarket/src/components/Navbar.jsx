@@ -13,6 +13,7 @@ const Navbar = () => {
 
     const { language, toggleLanguage, t } = useLanguage();
     const { user, logout, isAuthenticated } = useAuth();
+    const [isProfileOpen, setIsProfileOpen] = useState(false);
     const navigate = useNavigate();
 
     const [location, setLocation] = useState(null);
@@ -164,24 +165,7 @@ const Navbar = () => {
                                 )}
                             </div>
 
-                            {isAuthenticated ? (
-                                <div className="flex items-center space-x-4">
-                                    <div className="flex flex-col text-right">
-                                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Account</span>
-                                        <span className="text-[13px] font-bold text-gray-800 leading-tight max-w-[120px] truncate">{user?.fullName || user?.name || 'User'}</span>
-                                    </div>
-                                    <button
-                                        onClick={handleLogout}
-                                        className="font-bold text-[11px] uppercase tracking-widest text-gray-500 hover:text-red-600 transition duration-300 bg-gray-50 hover:bg-red-50 px-3 py-1.5 rounded-lg"
-                                    >
-                                        LOGOUT
-                                    </button>
-                                </div>
-                            ) : (
-                                <Link to="/login" className="font-bold text-sm uppercase tracking-wider text-gray-700 hover:text-red-600 transition duration-300">
-                                    {t.login}
-                                </Link>
-                            )}
+
 
                             <Link
                                 to={isAuthenticated ? (user?.hasShop ? "/seller-dashboard" : "/become-seller") : "/login?role=seller"}
@@ -270,6 +254,70 @@ const Navbar = () => {
                                     </>
                                 )}
 
+                             {isAuthenticated ? (
+                                <div className="relative group">
+                                    <button 
+                                        onClick={() => setIsProfileOpen(!isProfileOpen)}
+                                        className="flex items-center gap-2 p-1.5 rounded-full hover:bg-gray-50 transition-all duration-300 border border-transparent hover:border-gray-100"
+                                    >
+                                        <div className="w-10 h-10 rounded-full border-2 border-white overflow-hidden shadow-sm group-hover:shadow-md transition-all">
+                                            <img 
+                                                src={user?.profilePhotoUrl || 'https://placehold.co/40'} 
+                                                alt="Profile" 
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </div>
+                                        <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 text-gray-400 transition-transform duration-300 ${isProfileOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+
+                                    {/* Profile Dropdown */}
+                                    {isProfileOpen && (
+                                        <>
+                                            <div className="fixed inset-0 z-40" onClick={() => setIsProfileOpen(false)}></div>
+                                            <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-gray-100 z-50 overflow-hidden transform animate-in fade-in slide-in-from-top-2 duration-200">
+                                                <div className="p-5 bg-gradient-to-br from-gray-50 to-white flex items-center gap-4 border-b border-gray-100">
+                                                    <img 
+                                                        src={user?.profilePhotoUrl || 'https://placehold.co/40'} 
+                                                        className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
+                                                        alt="Profile"
+                                                    />
+                                                    <div>
+                                                        <div className="text-sm font-black text-slate-900 uppercase tracking-tight truncate max-w-[130px]">{user?.name}</div>
+                                                        <div className="text-[10px] text-gray-500 font-bold truncate max-w-[130px]">{user?.email}</div>
+                                                    </div>
+                                                </div>
+                                                <div className="p-2">
+                                                    <Link to="/account" className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-all" onClick={() => setIsProfileOpen(false)}>
+                                                        <svg className="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                                                        Your Profile
+                                                    </Link>
+                                                    {user?.hasShop && (
+                                                        <Link to="/seller-dashboard" className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-gray-700 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl transition-all" onClick={() => setIsProfileOpen(false)}>
+                                                            <svg className="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                                            Repositories (My Ads)
+                                                        </Link>
+                                                    )}
+                                                    <Link to="/account?tab=orders" className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-gray-700 hover:bg-amber-50 hover:text-amber-600 rounded-xl transition-all" onClick={() => setIsProfileOpen(false)}>
+                                                        <svg className="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
+                                                        Order History
+                                                    </Link>
+                                                    <hr className="my-2 border-gray-100 mx-2" />
+                                                    <button onClick={() => { handleLogout(); setIsProfileOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50 rounded-xl transition-all">
+                                                        <svg className="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4-4H3" /></svg>
+                                                        Sign out
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                             ) : (
+                                <Link to="/login" className="font-bold text-sm uppercase tracking-wider text-gray-700 hover:text-red-600 transition duration-300 ml-4">
+                                    {t.login}
+                                </Link>
+                             )}
                             </div>
                         </div>
                     </div>
@@ -421,10 +469,26 @@ const Navbar = () => {
                     <hr className="border-gray-100" />
                     {isAuthenticated ? (
                         <>
-                            <div className="text-lg font-bold text-gray-700">Hi, {user?.fullName || user?.name || 'User'}</div>
+                            <div className="flex items-center gap-4 p-2 bg-gray-50 rounded-2xl">
+                                <img 
+                                    src={user?.profilePhotoUrl || 'https://placehold.co/40'} 
+                                    className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
+                                    alt="Profile"
+                                />
+                                <div>
+                                    <div className="text-sm font-black text-gray-900 uppercase tracking-tight">{user?.name}</div>
+                                    <div className="text-[10px] text-gray-500 font-bold truncate max-w-[150px]">{user?.email}</div>
+                                </div>
+                            </div>
+                            <Link to="/account" className="text-lg font-bold text-gray-800 hover:text-red-600 transition-colors" onClick={() => setIsOpen(false)}>
+                                ACCOUNT SETTINGS
+                            </Link>
+                            <Link to="/account?tab=orders" className="text-lg font-bold text-gray-800 hover:text-red-600 transition-colors" onClick={() => setIsOpen(false)}>
+                                ORDER HISTORY
+                            </Link>
                             <button
                                 onClick={() => { handleLogout(); setIsOpen(false); }}
-                                className="text-left text-lg font-bold text-gray-800 hover:text-red-600 transition-colors"
+                                className="text-left text-lg font-bold text-red-600 hover:text-red-700 transition-colors uppercase tracking-tight"
                             >
                                 LOGOUT
                             </button>

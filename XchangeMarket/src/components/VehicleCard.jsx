@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useWishlist } from '../context/WishlistContext';
 import { orderAPI, paymentAPI } from '../services/api';
 import peoplesBankLogo from '../assets/peoplesbank.png';
+import ProductReviews from './ProductReviews';
 
 export const CheckoutModal = ({ isOpen, onClose, product, priceRaw, contactNumber, stockQuantity }) => {
     const navigate = useNavigate();
@@ -425,7 +426,9 @@ const VehicleCard = ({
     contactNumber = "94766414622",
     offerPercentage = "0%",
     badgeText = "New Arrival",
-    stockQuantity = 1
+    stockQuantity = 1,
+    averageRating = 0,
+    reviewCount = 0
 }) => {
     // Combine single image prop into the array if no images array is provided
     const sliderImages = images.length > 0 ? images : [image || "https://images.unsplash.com/photo-1619682817481-e994891cd1f5?q=80&w=2574&auto=format&fit=crop"];
@@ -574,8 +577,14 @@ const VehicleCard = ({
                 {/* Card Content */}
                 <div className="p-5">
                     <div className="flex justify-between items-start mb-2">
-                        <h3 className="text-lg font-bold text-gray-900 leading-snug line-clamp-2 group-hover:text-red-600 transition-colors">
-                            {title}
+                        <h3 className="text-lg font-bold text-gray-900 leading-snug line-clamp-2 group-hover:text-red-600 transition-colors flex items-center justify-between gap-2">
+                            <span>{title}</span>
+                            {(averageRating > 0) && (
+                                <div className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 bg-amber-50 rounded-lg border border-amber-100/50">
+                                    <svg className="w-3 h-3 text-amber-500 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                    <span className="text-[11px] font-black text-amber-600">{averageRating.toFixed(1)}</span>
+                                </div>
+                            )}
                         </h3>
                     </div>
 
@@ -688,7 +697,7 @@ const VehicleCard = ({
                                     )}
                                 </div>
 
-                                <div className="mb-8">
+                                <div className="mb-6">
                                     <h3 className="text-lg font-bold text-gray-900 mb-3">Description</h3>
                                     <ul className="space-y-1 text-gray-600 text-sm">
                                         {description.map((item, index) => (
@@ -700,44 +709,56 @@ const VehicleCard = ({
                                     </ul>
                                 </div>
 
-                                {isTechItem ? (
-                                    <button
-                                        onClick={() => {
-                                            if (offerPercentage === 'Unavailable') return;
-                                            setIsModalOpen(false); // Close details
-                                            setIsCheckoutOpen(true); // Open checkout
-                                        }}
-                                        disabled={offerPercentage === 'Unavailable'}
-                                        className={`w-full font-bold py-3 px-6 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg transition-all duration-300 ${offerPercentage === 'Unavailable'
-                                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none border border-gray-100'
-                                            : 'bg-black hover:bg-gray-800 text-white shadow-gray-200 transform hover:-translate-y-0.5'
-                                            }`}
-                                    >
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
-                                        {offerPercentage === 'Unavailable' ? 'Currently Sold Out' : 'Buy Now'}
-                                    </button>
-                                ) : (
-                                    <div className="space-y-3">
+                                {/* Buy Now / Contact buttons — above reviews */}
+                                <div className="mb-6">
+                                    {isTechItem ? (
                                         <button
-                                            onClick={handleWhatsAppClick}
-                                            className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-lg shadow-green-500/20"
+                                            onClick={() => {
+                                                if (offerPercentage === 'Unavailable') return;
+                                                setIsModalOpen(false);
+                                                setIsCheckoutOpen(true);
+                                            }}
+                                            disabled={offerPercentage === 'Unavailable'}
+                                            className={`w-full font-bold py-3 px-6 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg duration-300 ${offerPercentage === 'Unavailable'
+                                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none border border-gray-100'
+                                                : 'bg-black hover:bg-gray-800 text-white shadow-gray-200 transform hover:-translate-y-0.5'
+                                                }`}
                                         >
-                                            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                                                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z" />
-                                            </svg>
-                                            Contact via WhatsApp
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
+                                            {offerPercentage === 'Unavailable' ? 'Currently Sold Out' : 'Buy Now'}
                                         </button>
-                                        <button
-                                            onClick={() => setIsPhonePopupOpen(true)}
-                                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
-                                        >
-                                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                                            </svg>
-                                            Call Now
-                                        </button>
-                                    </div>
-                                )}
+                                    ) : (
+                                        <div className="space-y-3">
+                                            <button
+                                                onClick={handleWhatsAppClick}
+                                                className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-lg shadow-green-500/20"
+                                            >
+                                                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                                                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z" />
+                                                </svg>
+                                                Contact via WhatsApp
+                                            </button>
+                                            <button
+                                                onClick={() => setIsPhonePopupOpen(true)}
+                                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
+                                            >
+                                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                                </svg>
+                                                Call Now
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Product Reviews Section — below Buy Now */}
+                                <div className="border-t border-gray-100 pt-6">
+                                    <ProductReviews
+                                        productId={id}
+                                        averageRating={averageRating}
+                                        reviewCount={reviewCount}
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>
