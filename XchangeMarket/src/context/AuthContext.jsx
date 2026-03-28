@@ -112,6 +112,24 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  // Delete account
+  const deleteAccount = useCallback(async () => {
+    try {
+      setLoading(true);
+      await userAPI.deleteProfile();
+      logout();
+      toast.success('Account deleted successfully');
+      return { success: true };
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || 'Failed to delete account';
+      setError(errorMessage);
+      toast.error(errorMessage);
+      return { success: false, error: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  }, [logout]);
+
   // Update user profile
   const updateUser = useCallback(async (userData) => {
     try {
@@ -158,6 +176,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     getCurrentUser,
     updateUser,
+    deleteAccount,
     isAuthenticated: !!token,
   };
 

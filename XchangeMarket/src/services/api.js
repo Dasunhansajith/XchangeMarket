@@ -67,7 +67,10 @@ export const userAPI = {
     apiWithPrefix.get('/users/me'),
 
   updateProfile: (userData) =>
-    apiWithPrefix.put('/users/me', userData),
+    apiWithPrefix.post('/users/me', userData),
+
+  deleteProfile: () =>
+    apiWithPrefix.delete('/users/me'),
 };
 
 // ============ VEHICLE ENDPOINTS ============
@@ -183,6 +186,30 @@ export const orderAPI = {
 
   declineOrder: (orderId) =>
     apiWithPrefix.post(`/orders/${orderId}/decline`),
+
+  submitReview: (orderId, reviewData) =>
+    apiWithPrefix.post(`/orders/${orderId}/review`, reviewData),
+
+  editReview: (orderId, reviewData) =>
+    apiWithPrefix.put(`/orders/${orderId}/review`, reviewData),
+
+  deleteReview: (orderId) =>
+    apiWithPrefix.delete(`/orders/${orderId}/review`),
+};
+
+// ============ REVIEW ENDPOINTS ============
+export const reviewAPI = {
+  getProductReviews: (productId) =>
+    apiWithPrefix.get(`/reviews/product/${productId}`),
+
+  createReview: (reviewData) =>
+    apiWithPrefix.post('/reviews', reviewData),
+
+  updateReview: (reviewId, reviewData) =>
+    apiWithPrefix.put(`/reviews/${reviewId}`, reviewData),
+
+  deleteReview: (reviewId) =>
+    apiWithPrefix.delete(`/reviews/${reviewId}`),
 };
 
 // ============ NOTIFICATION ENDPOINTS ============
