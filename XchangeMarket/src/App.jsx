@@ -11,6 +11,8 @@ import AdminDashboard from './pages/AdminDashboard';
 import SellerDashboard from './pages/SellerDashboard';
 import Products from './pages/Products';
 import AccountProfile from './pages/AccountProfile';
+import PaymentSuccess from './pages/PaymentSuccess';
+import PaymentCancel from './pages/PaymentCancel';
 import { LanguageProvider } from './context/LanguageContext';
 import { AuthProvider } from './context/AuthContext';
 import { WishlistProvider } from './context/WishlistContext';
@@ -22,13 +24,7 @@ import { Toaster } from 'react-hot-toast';
 import CategoryGrid from './components/CategoryGrid';
 import AdSlider from './components/AdSlider';
 import AppDownloadCard from './components/AppDownloadCard';
-
-
-// ...existing code...
-import VehicleCard from './components/VehicleCard';
-
-
-// Removed unused demo image imports
+import { NotificationProvider } from './context/NotificationContext';
 
 const Home = () => {
   return (
@@ -84,10 +80,6 @@ const Home = () => {
     </div>
   );
 };
-// ...existing code...
-
-import { NotificationProvider } from './context/NotificationContext';
-
 
 function App() {
   return (
@@ -153,4 +145,4 @@ function App() {
 
 
 
-export default App
+export default App;
