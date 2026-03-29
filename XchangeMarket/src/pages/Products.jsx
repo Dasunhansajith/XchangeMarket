@@ -211,6 +211,7 @@ const Products = () => {
                                             description={product.description ? product.description.toString().split('\n') : ["No description available."]}
                                             offerPercentage={product.stockQuantity > 0 ? 'Available' : 'Unavailable'}
                                             stockQuantity={product.stockQuantity}
+                                            averageRating={product.averageRating || 0}
                                             contactNumber={product.contactNumber || product.sellerPhone || "94766414622"}
                                         />
                                     </motion.div>
