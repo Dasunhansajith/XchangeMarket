@@ -232,7 +232,7 @@ export const PaymentSuccess = () => {
               Continue Shopping
             </button>
             <button
-              onClick={() => navigate('/seller-dashboard')}
+              onClick={() => navigate('/account?tab=orders')}
               className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold rounded-lg transition-all"
             >
               View My Orders

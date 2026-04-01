@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { orderAPI, reviewAPI } from '../services/api';
 import { StarSelector } from '../components/ProductReviews';
+import { ProfileAvatar } from '../components/ProfileAvatar';
 import toast from 'react-hot-toast';
 
 const AccountProfile = () => {
@@ -165,7 +166,7 @@ const AccountProfile = () => {
                         <button
                             key={icon}
                             onClick={() => icon === 'orders' ? setSearchParams({ tab: 'orders' }) : setSearchParams({ tab: 'profile' })}
-                            className={`p-3 rounded-2xl transition-all duration-300 ${activeTab === icon ? 'text-blue-600 bg-blue-50' : 'text-gray-300 hover:text-gray-500 hover:bg-gray-50'}`}
+                            className={`p-3 rounded-2xl transition-all duration-300 ${activeTab === icon ? 'text-blue-600 bg-blue-50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
                         >
                             <span className="capitalize text-[10px] font-bold hidden md:block mt-1">{icon}</span>
                             {icon === 'orders' && <svg className="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>}
@@ -197,7 +198,12 @@ const AccountProfile = () => {
                             <button className="p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:bg-slate-100 transition-colors">
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
                             </button>
-                            <img src={user.profilePhotoUrl || 'https://placehold.co/40'} className="w-10 h-10 rounded-xl object-cover ring-2 ring-white shadow-sm" alt="Me" />
+                            <ProfileAvatar
+                              profilePhotoUrl={user.profilePhotoUrl}
+                              name={user.name}
+                              size="sm"
+                              ringClass="ring-2 ring-white shadow-sm"
+                            />
                         </div>
                     </header>
 
@@ -212,16 +218,29 @@ const AccountProfile = () => {
                                     <div className="px-6 pb-4 -mt-8 flex items-end justify-between">
                                         <div className="flex items-end gap-5">
                                             <div className="relative group">
-                                                <img
-                                                    src={formData.profilePhotoUrl || 'https://placehold.co/100'}
-                                                    className="w-20 h-20 rounded-2xl object-cover ring-4 ring-white shadow-lg"
-                                                    alt="Profile"
+                                                <ProfileAvatar
+                                                  profilePhotoUrl={formData.profilePhotoUrl}
+                                                  name={formData.name}
+                                                  size="xl"
+                                                  ringClass="ring-4 ring-white shadow-lg"
                                                 />
                                                 {editing && (
-                                                    <label className="absolute -bottom-1 -right-1 bg-blue-600 text-white p-1.5 rounded-lg cursor-pointer shadow-md hover:bg-blue-700 transition-all scale-75">
-                                                        <input type="file" className="hidden" onChange={handleFileChange} />
-                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /></svg>
-                                                    </label>
+                                                    <>
+                                                        <label className="absolute -bottom-1 -right-1 bg-blue-600 text-white p-1.5 rounded-lg cursor-pointer shadow-md hover:bg-blue-700 transition-all">
+                                                            <input type="file" className="hidden" onChange={handleFileChange} />
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /></svg>
+                                                        </label>
+                                                        {formData.profilePhotoUrl && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setFormData({ ...formData, profilePhotoUrl: '' })}
+                                                                className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full shadow-md hover:bg-red-600 transition-all active:scale-95"
+                                                                title="Delete photo"
+                                                            >
+                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                                            </button>
+                                                        )}
+                                                    </>
                                                 )}
                                             </div>
                                             <div className="mb-1">
@@ -229,12 +248,38 @@ const AccountProfile = () => {
                                                 <p className="text-xs text-slate-400 font-medium">{user.email}</p>
                                             </div>
                                         </div>
-                                        <button
-                                            onClick={() => editing ? handleSave() : setEditing(true)}
-                                            className={`px-6 py-2 rounded-xl font-bold text-xs transition-all shadow-sm active:scale-95 ${editing ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
-                                        >
-                                            {editing ? 'Save' : 'Edit Profile'}
-                                        </button>
+                                        <div className="flex items-center gap-3">
+                                            {editing && (
+                                                <button
+                                                    onClick={() => {
+                                                        setEditing(false);
+                                                        setFormData(prev => ({
+                                                            ...prev,
+                                                            name: user.name || '',
+                                                            phone: user.phone || '',
+                                                            address: user.address || '',
+                                                            nicNumber: user.nicNumber || '',
+                                                            profilePhotoUrl: user.profilePhotoUrl || '',
+                                                        }));
+                                                    }}
+                                                    className="px-6 py-2 rounded-xl font-bold text-xs transition-all shadow-sm active:scale-95 bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                                >
+                                                    Cancel
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => {
+                                                    if (editing) {
+                                                        handleSave();
+                                                    } else {
+                                                        setEditing(true);
+                                                    }
+                                                }}
+                                                className={`px-6 py-2 rounded-xl font-bold text-xs transition-all shadow-sm active:scale-95 ${editing ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
+                                            >
+                                                {editing ? 'Save' : 'Edit Profile'}
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
 
