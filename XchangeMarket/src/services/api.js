@@ -71,6 +71,9 @@ export const userAPI = {
 
   deleteProfile: () =>
     apiWithPrefix.delete('/users/me'),
+
+  getAllUsers: () =>
+    apiWithPrefix.get('/users'),
 };
 
 // ============ VEHICLE ENDPOINTS ============
@@ -112,6 +115,18 @@ export const sellerAPI = {
 
   getAllApplications: () =>
     apiWithPrefix.get('/sellers/applications'),
+
+  getUserApplication: () =>
+    apiWithPrefix.get('/sellers/application/user'),
+
+  getPendingApplications: () =>
+    apiWithPrefix.get('/sellers/applications/pending'),
+
+  approveApplication: (applicationId) =>
+    apiWithPrefix.post(`/sellers/applications/${applicationId}/approve`),
+
+  rejectApplication: (applicationId, data) =>
+    apiWithPrefix.post(`/sellers/applications/${applicationId}/reject`, data),
 
   registerShop: (shopData) =>
     apiWithPrefix.post('/sellers/register-shop', shopData),
@@ -168,6 +183,18 @@ export const miscAPI = {
 export const adminAPI = {
   adminHello: () =>
     apiWithPrefix.get('/admin/hello'),
+
+  getPendingSellerApplications: () =>
+    apiWithPrefix.get('/admin/seller-applications/pending'),
+
+  getAllSellerApplications: () =>
+    apiWithPrefix.get('/admin/seller-applications'),
+
+  approveSellerApplication: (applicationId) =>
+    apiWithPrefix.post(`/admin/seller-applications/${applicationId}/approve`),
+
+  rejectSellerApplication: (applicationId, data) =>
+    apiWithPrefix.post(`/admin/seller-applications/${applicationId}/reject`, data),
 };
 
 // ============ ORDER ENDPOINTS ============
@@ -217,11 +244,14 @@ export const notificationAPI = {
   getMyNotifications: () =>
     apiWithPrefix.get('/notifications'),
 
-  getUnreadCount: () =>
-    apiWithPrefix.get('/notifications/unread-count'),
+  getUnreadNotifications: () =>
+    apiWithPrefix.get('/notifications/unread'),
 
   markAsRead: (id) =>
     apiWithPrefix.post(`/notifications/${id}/read`),
+
+  deleteNotification: (id) =>
+    apiWithPrefix.delete(`/notifications/${id}`),
 };
 
 // ============ PAYMENT ENDPOINTS ============

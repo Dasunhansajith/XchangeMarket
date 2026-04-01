@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { productAPI, orderAPI } from '../services/api';
+import { productAPI, orderAPI, sellerAPI, notificationAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
-import { FaBox, FaPlus, FaChartLine, FaEdit, FaTrash, FaUpload, FaStore, FaMoneyBillWave, FaSpinner, FaExclamationTriangle, FaCheck, FaTimes, FaClipboardList } from 'react-icons/fa';
+import { FaBox, FaPlus, FaChartLine, FaEdit, FaTrash, FaUpload, FaStore, FaMoneyBillWave, FaSpinner, FaExclamationTriangle, FaCheck, FaTimes, FaClipboardList, FaBell } from 'react-icons/fa';
 
 const SellerDashboard = () => {
     const { user } = useAuth();
@@ -15,6 +15,8 @@ const SellerDashboard = () => {
     const [error, setError] = useState(null);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
+    const [applicationStatus, setApplicationStatus] = useState(null);
+    const [applicationLoading, setApplicationLoading] = useState(true);
 
     const [formData, setFormData] = useState({
         name: '',
@@ -26,6 +28,80 @@ const SellerDashboard = () => {
     });
 
     const [imagePreviews, setImagePreviews] = useState([]);
+
+    // Fetch seller application status
+    useEffect(() => {
+        const fetchApplicationStatus = async () => {
+            try {
+                setApplicationLoading(true);
+                const response = await sellerAPI.getUserApplication();
+                setApplicationStatus(response.data);
+            } catch (err) {
+                console.log('No seller application found - user may not have applied yet');
+                setApplicationStatus(null);
+            } finally {
+                setApplicationLoading(false);
+            }
+        };
+
+        fetchApplicationStatus();
+    }, []);
+
+    // Show pending/rejected status if not approved
+    if (!applicationLoading && applicationStatus && applicationStatus.status !== 'APPROVED') {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-12 px-4">
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="max-w-2xl mx-auto"
+                >
+                    <div className="bg-white rounded-xl shadow-lg p-8">
+                        <div className="text-center mb-6">
+                            {applicationStatus.status === 'PENDING' ? (
+                                <>
+                                    <FaSpinner className="text-5xl text-yellow-500 mx-auto mb-4 animate-spin" />
+                                    <h2 className="text-3xl font-bold text-gray-800 mb-2">Application Pending</h2>
+                                    <p className="text-gray-600 text-lg">Your seller application is being reviewed by our admin team.</p>
+                                </>
+                            ) : (
+                                <>
+                                    <FaTimes className="text-5xl text-red-500 mx-auto mb-4" />
+                                    <h2 className="text-3xl font-bold text-gray-800 mb-2">Application Declined</h2>
+                                    <p className="text-gray-600 text-lg">Unfortunately, your application was declined.</p>
+                                    {applicationStatus.rejectionReason && (
+                                        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                                            <p className="text-red-700"><strong>Reason:</strong> {applicationStatus.rejectionReason}</p>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
+
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+                            <h3 className="font-semibold text-lg text-blue-900 mb-3">📋 Application Details</h3>
+                            <div className="space-y-2 text-blue-800">
+                                <p><strong>Shop Name:</strong> {applicationStatus.shopName}</p>
+                                <p><strong>Location:</strong> {applicationStatus.city}, {applicationStatus.district}</p>
+                                <p><strong>Categories:</strong> {applicationStatus.shopCategories?.join(', ')}</p>
+                                <p><strong>Payment Methods:</strong> {applicationStatus.acceptedPaymentMethods}</p>
+                                <p><strong>Applied On:</strong> {new Date(applicationStatus.appliedAt).toLocaleDateString()}</p>
+                            </div>
+                        </div>
+
+                        {applicationStatus.status === 'REJECTED' && (
+                            <button
+                                onClick={() => window.location.href = '/become-seller'}
+                                className="w-full py-3 px-4 bg-gradient-to-r from-red-600 to-red-800 text-white font-semibold rounded-lg hover:from-red-700 hover:to-red-900 transition"
+                            >
+                                Submit New Application
+                            </button>
+                        )}
+                    </div>
+                </motion.div>
+            </div>
+        );
+    }
 
     const handleImageChange = (e) => {
         const files = Array.from(e.target.files);
