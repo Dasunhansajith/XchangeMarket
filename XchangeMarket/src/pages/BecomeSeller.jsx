@@ -100,26 +100,46 @@ const BecomeSeller = () => {
             })
             .join(', ');
 
-        const applicationData = {
+        const shopData = {
             shopName: formData.shopName.trim(),
-            shopCategories: formData.categories,
+            shopCategories: formData.categories.join(', '),
             district: formData.district,
             city: formData.city,
-            acceptedPaymentMethods: selectedPaymentMethods
+            acceptedPaymentMethods: selectedPaymentMethods,
+            email: user?.email || localStorage.getItem('userEmail') // Fallback
         };
 
         try {
-            console.log('Submitting Seller Application:', applicationData);
-            const response = await sellerAPI.applySeller(applicationData);
-            console.log('Application Response:', response.data);
+            console.log('Sending Registration Data:', shopData);
+            const response = await sellerAPI.registerShop(shopData);
+            console.log('Backend Response:', response.data);
 
-            toast.success("Application Submitted! Awaiting Admin Approval.");
+            toast.success("Shop Registered Successfully!");
 
-            // Navigate to ApplicationSubmitted temporary page
-            navigate('/submitted-application');
+            // Update AuthContext user state with the updated user info from backend
+            const userData = response.data?.user || response.data;
+            const token = response.data?.token;
+
+            if (userData) {
+                setUser(userData);
+                localStorage.setItem('userInfo', JSON.stringify(userData));
+                if (token) {
+                    localStorage.setItem('authToken', token);
+                }
+            } else {
+                // Last resort fallback
+                setUser(prev => ({
+                    ...prev,
+                    hasShop: true,
+                    shopId: response.data?.id || true
+                }));
+            }
+
+            // Navigate to dashboard
+            navigate('/seller-dashboard');
         } catch (err) {
-            console.error('Application submission failed:', err);
-            const errMsg = err.response?.data?.message || err.response?.data?.error || "Failed to submit application. Please check your connection.";
+            console.error('Registration failed:', err);
+            const errMsg = err.response?.data?.message || err.response?.data?.error || "Failed to register shop. Please check your connection.";
             setError(errMsg);
             toast.error(errMsg);
         } finally {
@@ -165,12 +185,6 @@ const BecomeSeller = () => {
                 className="mt-8 sm:mx-auto sm:w-full sm:max-w-lg relative z-10"
             >
                 <div className="bg-white/95 backdrop-blur-md py-8 px-4 shadow-2xl sm:rounded-xl sm:px-10 border border-white/20">
-                    <div className="mb-6 p-4 bg-blue-50 border border-blue-300 rounded-lg">
-                        <p className="text-sm text-blue-800">
-                            <strong>📋 Note:</strong> Your application to become a seller will be reviewed by our admin team. You'll receive a notification once your application is approved or declined.
-                        </p>
-                    </div>
-
                     <form className="space-y-6" onSubmit={handleSubmit}>
 
                         {error && (
@@ -376,7 +390,7 @@ const BecomeSeller = () => {
                                 disabled={loading}
                                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-red-600 to-red-800 hover:from-red-700 hover:to-red-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {loading ? "Submitting Application..." : "Submit Application"}
+                                {loading ? "Registering Shop..." : t.registerShopButton}
                             </button>
                         </div>
                     </form>
