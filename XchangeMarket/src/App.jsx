@@ -5,21 +5,19 @@ import Footer from './components/Footer';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import BecomeSeller from './pages/BecomeSeller';
-import ApplicationSubmitted from './pages/ApplicationSubmitted';
 import AboutUs from './pages/AboutUs';
 import ContactUs from './pages/ContactUs';
 import AdminDashboard from './pages/AdminDashboard';
 import SellerDashboard from './pages/SellerDashboard';
 import Products from './pages/Products';
 import AccountProfile from './pages/AccountProfile';
-import NotificationsPage from './pages/NotificationsPage';
 import PaymentSuccess from './pages/PaymentSuccess';
 import PaymentCancel from './pages/PaymentCancel';
 import { LanguageProvider } from './context/LanguageContext';
 import { AuthProvider } from './context/AuthContext';
 import { WishlistProvider } from './context/WishlistContext';
 import { ProtectedRoute, AdminRoute } from './components/ProtectedRoute';
-import ConditionalFloatingWishlistButton from './components/ConditionalFloatingWishlistButton';
+import FloatingWishlistButton from './components/FloatingWishlistButton';
 
 
 import { Toaster } from 'react-hot-toast';
@@ -100,7 +98,6 @@ function App() {
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/payment-success" element={<PaymentSuccess />} />
                 <Route path="/payment-cancel" element={<PaymentCancel />} />
-                <Route path="/submitted-application" element={<ApplicationSubmitted />} />
                 <Route
                   path="/become-seller"
                   element={
@@ -133,17 +130,9 @@ function App() {
                     </ProtectedRoute>
                   }
                 />
-                <Route
-                  path="/notifications"
-                  element={
-                    <ProtectedRoute>
-                      <NotificationsPage />
-                    </ProtectedRoute>
-                  }
-                />
               </Routes>
               <Footer />
-              <ConditionalFloatingWishlistButton />
+              <FloatingWishlistButton />
               <Toaster position="top-center" reverseOrder={false} />
             </LanguageProvider>
           </WishlistProvider>

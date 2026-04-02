@@ -1,176 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import toast from 'react-hot-toast';
 import {
-    FaUsers, FaCar, FaChartLine,
-    FaCheckCircle, FaTimesCircle, FaEllipsisV, FaSearch, FaBell, FaTrash
+    FaUsers, FaCar, FaFlag, FaChartLine, FaShieldAlt,
+    FaCheckCircle, FaTimesCircle, FaEllipsisV, FaSearch, FaBell
 } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
-import { adminAPI, userAPI, productAPI } from '../services/api';
+import { vehicleAPI, sellerAPI, fraudAPI } from '../services/api';
 
 const AdminDashboard = () => {
     const { user } = useAuth();
-    const [activeTab, setActiveTab] = useState('dashboard');
     const [stats, setStats] = useState({
         totalUsers: 0,
-        usersRegisteredToday: 0,
         pendingSellers: 0,
         activeAds: 0,
-        productsAddedToday: 0
+        fraudReports: 0
     });
-    const [applications, setApplications] = useState([]);
-    const [users, setUsers] = useState([]);
-    const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [appLoading, setAppLoading] = useState({});
-    const [deleteLoading, setDeleteLoading] = useState({});
 
+    // Mock data for initial UI - in real app would use useEffect to fetch
     useEffect(() => {
-        if (activeTab === 'dashboard') {
-            fetchApplications();
-            fetchStats();
-        } else if (activeTab === 'users') {
-            fetchUsers();
-        } else if (activeTab === 'ads') {
-            fetchProducts();
-        }
-    }, [activeTab]);
-
-    const fetchStats = async () => {
-        try {
-            const productsRes = await productAPI.getAllProducts();
-            const products = (Array.isArray(productsRes.data) ? productsRes.data : productsRes.data?.data) || [];
-            
-            // Fetch users count
-            const usersRes = await userAPI.getAllUsers();
-            const usersList = Array.isArray(usersRes.data) ? usersRes.data : [];
-            
-            // Calculate today's date
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            
-            // Calculate users registered today
-            const usersRegisteredToday = usersList.filter(user => {
-                const userDate = new Date(user.createdAt);
-                userDate.setHours(0, 0, 0, 0);
-                return userDate.getTime() === today.getTime();
-            }).length;
-            
-            // Calculate products added today
-            const productsAddedToday = products.filter(product => {
-                const productDate = new Date(product.createdAt || product.uploadedAt || product.dateAdded);
-                productDate.setHours(0, 0, 0, 0);
-                return productDate.getTime() === today.getTime();
-            }).length;
-            
-            setStats(prev => ({
-                ...prev,
-                totalUsers: usersList.length,
-                usersRegisteredToday: usersRegisteredToday,
-                activeAds: products.length,
-                productsAddedToday: productsAddedToday
-            }));
-        } catch (err) {
-            console.error('Error fetching stats:', err);
-            console.log('Full response:', err);
-        }
-    };
-
-    const fetchApplications = async () => {
-        try {
-            setLoading(true);
-            const response = await adminAPI.getAllSellerApplications();
-            const apps = response.data || [];
-            setApplications(apps);
-            
-            // Calculate stats
-            const pendingCount = apps.filter(app => app.status === 'PENDING').length;
-            setStats(prev => ({
-                ...prev,
-                pendingSellers: pendingCount
-            }));
-        } catch (err) {
-            console.error('Error fetching applications:', err);
-            toast.error('Failed to load seller applications');
-        } finally {
+        const fetchStats = async () => {
+            // These would be real API calls in a real setup
+            setStats({
+                totalUsers: 1250,
+                pendingSellers: 8,
+                activeAds: 450,
+                fraudReports: 3
+            });
             setLoading(false);
-        }
-    };
-
-    const fetchUsers = async () => {
-        try {
-            setLoading(true);
-            const response = await userAPI.getAllUsers();
-            setUsers(response.data || []);
-        } catch (err) {
-            console.error('Error fetching users:', err);
-            toast.error('Failed to load users');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchProducts = async () => {
-        try {
-            setLoading(true);
-            const response = await productAPI.getAllProducts();
-            setProducts(Array.isArray(response.data) ? response.data : []);
-        } catch (err) {
-            console.error('Error fetching products:', err);
-            toast.error('Failed to load products');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleApprove = async (applicationId) => {
-        try {
-            setAppLoading(prev => ({ ...prev, [applicationId]: true }));
-            await adminAPI.approveSellerApplication(applicationId);
-            toast.success('Application approved!');
-            fetchApplications();
-        } catch (err) {
-            console.error('Error approving application:', err);
-            toast.error('Failed to approve application');
-        } finally {
-            setAppLoading(prev => ({ ...prev, [applicationId]: false }));
-        }
-    };
-
-    const handleReject = async (applicationId) => {
-        const reason = prompt('Enter rejection reason:');
-        if (!reason) return;
-
-        try {
-            setAppLoading(prev => ({ ...prev, [applicationId]: true }));
-            await adminAPI.rejectSellerApplication(applicationId, { reason });
-            toast.success('Application rejected');
-            fetchApplications();
-        } catch (err) {
-            console.error('Error rejecting application:', err);
-            toast.error('Failed to reject application');
-        } finally {
-            setAppLoading(prev => ({ ...prev, [applicationId]: false }));
-        }
-    };
-
-    const handleDeleteProduct = async (productId) => {
-        if (!window.confirm('Are you sure you want to delete this product?')) {
-            return;
-        }
-
-        try {
-            setDeleteLoading(prev => ({ ...prev, [productId]: true }));
-            await productAPI.deleteProduct(productId);
-            toast.success('Product deleted successfully!');
-            fetchProducts();
-        } catch (err) {
-            console.error('Error deleting product:', err);
-            toast.error('Failed to delete product');
-        } finally {
-            setDeleteLoading(prev => ({ ...prev, [productId]: false }));
-        }
-    };
+        };
+        fetchStats();
+    }, []);
 
     const containerVariants = {
         hidden: { opacity: 0 },
@@ -182,7 +42,10 @@ const AdminDashboard = () => {
         }
     };
 
-    const pendingApplications = applications.filter(app => app.status === 'PENDING');
+    const itemVariants = {
+        hidden: { y: 20, opacity: 0 },
+        visible: { y: 0, opacity: 1 }
+    };
 
     return (
         <div className="min-h-screen bg-gray-50 flex">
@@ -190,29 +53,16 @@ const AdminDashboard = () => {
             <aside className="w-64 bg-gray-900 text-white hidden lg:flex flex-col">
                 <div className="p-6 border-b border-gray-800">
                     <h1 className="text-2xl font-black tracking-tighter flex items-center gap-1">
-                        <span className="text-red-600">Welcome,</span>
-                        <span>Admin</span>
+                        <span className="text-red-600">X</span>
+                        <span>ADMIN</span>
                     </h1>
                 </div>
                 <nav className="flex-1 p-4 space-y-2">
-                    <SidebarItem 
-                        icon={<FaChartLine />} 
-                        label="Dashboard" 
-                        active={activeTab === 'dashboard'}
-                        onClick={() => setActiveTab('dashboard')}
-                    />
-                    <SidebarItem 
-                        icon={<FaUsers />} 
-                        label="Users" 
-                        active={activeTab === 'users'}
-                        onClick={() => setActiveTab('users')}
-                    />
-                    <SidebarItem 
-                        icon={<FaCar />} 
-                        label="Advertisements" 
-                        active={activeTab === 'ads'}
-                        onClick={() => setActiveTab('ads')}
-                    />
+                    <SidebarItem icon={<FaChartLine />} label="Dashboard" active />
+                    <SidebarItem icon={<FaUsers />} label="Users" />
+                    <SidebarItem icon={<FaCar />} label="Vehicles" />
+                    <SidebarItem icon={<FaFlag />} label="Fraud Reports" />
+                    <SidebarItem icon={<FaShieldAlt />} label="Security" />
                 </nav>
             </aside>
 
@@ -231,17 +81,15 @@ const AdminDashboard = () => {
                     <div className="flex items-center gap-6">
                         <button className="relative text-gray-400 hover:text-gray-600">
                             <FaBell size={20} />
-                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full">
-                                {pendingApplications.length}
-                            </span>
+                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full">3</span>
                         </button>
                         <div className="flex items-center gap-3">
                             <div className="text-right">
-                                <p className="text-sm font-bold text-gray-800">{user?.fullName || user?.name || 'Admin User'}</p>
+                                <p className="text-sm font-bold text-gray-800">{user?.fullName || 'Admin User'}</p>
                                 <p className="text-xs text-gray-500">System Administrator</p>
                             </div>
                             <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center text-white font-bold">
-                                {(user?.fullName || user?.name || 'A').charAt(0)}
+                                {user?.fullName?.charAt(0) || 'A'}
                             </div>
                         </div>
                     </div>
@@ -249,233 +97,123 @@ const AdminDashboard = () => {
 
                 {/* Dashboard Body */}
                 <div className="p-8 space-y-8 overflow-y-auto">
-                    {activeTab === 'dashboard' && (
-                        <>
-                            <div className="flex justify-between items-center">
-                                <h2 className="text-2xl font-bold text-gray-800">Dashboard Overview</h2>
-                                <span className="text-sm text-gray-500">Last updated: {new Date().toLocaleDateString()}</span>
-                            </div>
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-2xl font-bold text-gray-800">Dashboard Overview</h2>
+                        <span className="text-sm text-gray-500">Last updated: Mar 4, 2026</span>
+                    </div>
 
-                            {/* Stats Cards */}
-                            <motion.div
-                                variants={containerVariants}
-                                initial="hidden"
-                                animate="visible"
-                                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-                            >
-                                <StatCard
-                                    icon={<FaUsers color="#dc2626" />}
-                                    label="Total Users"
-                                    value={stats.totalUsers}
-                                    trend={`+${stats.usersRegisteredToday} registered today`}
+                    {/* Stats Cards */}
+                    <motion.div
+                        variants={containerVariants}
+                        initial="hidden"
+                        animate="visible"
+                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+                    >
+                        <StatCard
+                            icon={<FaUsers color="#dc2626" />}
+                            label="Total Users"
+                            value={stats.totalUsers}
+                            trend="+4% from last week"
+                        />
+                        <StatCard
+                            icon={<FaShieldAlt color="#dc2626" />}
+                            label="Seller Applications"
+                            value={stats.pendingSellers}
+                            trend="8 pending approval"
+                            warning
+                        />
+                        <StatCard
+                            icon={<FaCar color="#dc2626" />}
+                            label="Active Ads"
+                            value={stats.activeAds}
+                            trend="+12 New today"
+                        />
+                        <StatCard
+                            icon={<FaFlag color="#dc2626" />}
+                            label="Fraud Reports"
+                            value={stats.fraudReports}
+                            trend="2 require review"
+                            danger
+                        />
+                    </motion.div>
+
+                    {/* Secondary Sections */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        {/* Pending Approvals Table */}
+                        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100">
+                            <div className="p-6 border-b border-gray-50 flex justify-between items-center">
+                                <h3 className="font-bold text-gray-800">Pending Seller Applications</h3>
+                                <button className="text-sm text-red-600 font-semibold hover:underline">View All</button>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left">
+                                    <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-bold">
+                                        <tr>
+                                            <th className="px-6 py-4">User</th>
+                                            <th className="px-6 py-4">Shop Name</th>
+                                            <th className="px-6 py-4">Date</th>
+                                            <th className="px-6 py-4">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-50 text-sm">
+                                        <TableRow
+                                            name="Kasun Perera"
+                                            shop="Kasun's Electronics"
+                                            date="2026-03-03"
+                                        />
+                                        <TableRow
+                                            name="Nimali Silva"
+                                            shop="Green Market"
+                                            date="2026-03-02"
+                                        />
+                                        <TableRow
+                                            name="Saman Kumara"
+                                            shop="Rapid Autos"
+                                            date="2026-03-01"
+                                        />
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* Recent Activity */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+                            <div className="p-6 border-b border-gray-50">
+                                <h3 className="font-bold text-gray-800">Recent Security Alerts</h3>
+                            </div>
+                            <div className="p-6 space-y-6">
+                                <ActivityItem
+                                    text="Multiple login attempts detected from IP 192.168.1.1"
+                                    time="2 mins ago"
+                                    type="danger"
                                 />
-                                <StatCard
-                                    icon={<FaChartLine color="#dc2626" />}
-                                    label="Pending Seller Applications"
-                                    value={stats.pendingSellers}
-                                    trend={`${stats.pendingSellers} awaiting approval`}
-                                    warning={stats.pendingSellers > 0}
+                                <ActivityItem
+                                    text="New fraud report submitted for Ad #7482"
+                                    time="45 mins ago"
+                                    type="warning"
                                 />
-                                <StatCard
-                                    icon={<FaCar color="#dc2626" />}
-                                    label="Active Products"
-                                    value={stats.activeAds}
-                                    trend={`+${stats.productsAddedToday} New today`}
+                                <ActivityItem
+                                    text="System backup completed successfully"
+                                    time="2 hours ago"
+                                    type="success"
                                 />
-                            </motion.div>
-
-                            {/* Pending Approvals Table */}
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-                                <div className="p-6 border-b border-gray-50 flex justify-between items-center">
-                                    <h3 className="font-bold text-gray-800">Pending Seller Applications</h3>
-                                    <span className="text-sm text-gray-500">{pendingApplications.length} pending</span>
-                                </div>
-                                <div className="overflow-x-auto">
-                                    {loading ? (
-                                        <div className="p-8 text-center">
-                                            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-red-600 mx-auto"></div>
-                                        </div>
-                                    ) : pendingApplications.length === 0 ? (
-                                        <div className="p-8 text-center text-gray-500">
-                                            <p>No pending applications</p>
-                                        </div>
-                                    ) : (
-                                        <table className="w-full text-left">
-                                            <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-bold">
-                                                <tr>
-                                                    <th className="px-6 py-4">Shop Name</th>
-                                                    <th className="px-6 py-4">Store Creator</th>
-                                                    <th className="px-6 py-4">Location</th>
-                                                    <th className="px-6 py-4">Categories</th>
-                                                    <th className="px-6 py-4">Applied Date</th>
-                                                    <th className="px-6 py-4">Action</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-gray-50 text-sm">
-                                                {pendingApplications.map((app) => (
-                                                    <TableRow
-                                                        key={app.id}
-                                                        app={app}
-                                                        onApprove={handleApprove}
-                                                        onReject={handleReject}
-                                                        isLoading={appLoading[app.id]}
-                                                    />
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    )}
-                                </div>
                             </div>
-                        </>
-                    )}
-
-                    {activeTab === 'users' && (
-                        <>
-                            <div className="flex justify-between items-center">
-                                <h2 className="text-2xl font-bold text-gray-800">All Users</h2>
-                                <span className="text-sm text-gray-500">Total: {users.length} users</span>
-                            </div>
-
-                            {/* Users Table */}
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-                                <div className="overflow-x-auto">
-                                    {loading ? (
-                                        <div className="p-8 text-center">
-                                            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-red-600 mx-auto"></div>
-                                        </div>
-                                    ) : users.length === 0 ? (
-                                        <div className="p-8 text-center text-gray-500">
-                                            <p>No users found</p>
-                                        </div>
-                                    ) : (
-                                        <table className="w-full text-left">
-                                            <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-bold">
-                                                <tr>
-                                                    <th className="px-6 py-4">Name</th>
-                                                    <th className="px-6 py-4">Email</th>
-                                                    <th className="px-6 py-4">Address</th>
-                                                    <th className="px-6 py-4">Contact Number</th>
-                                                    <th className="px-6 py-4">Role</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-gray-50 text-sm">
-                                                {users.map((usr) => (
-                                                    <UserTableRow key={usr.id} user={usr} />
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    )}
-                                </div>
-                            </div>
-                        </>
-                    )}
-
-                    {activeTab === 'ads' && (
-                        <>
-                            <div className="flex justify-between items-center">
-                                <h2 className="text-2xl font-bold text-gray-800">Advertisements Management</h2>
-                                <span className="text-sm text-gray-500">Total: {products.length} products</span>
-                            </div>
-
-                            {/* Products Table */}
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-                                <div className="overflow-x-auto">
-                                    {loading ? (
-                                        <div className="p-8 text-center">
-                                            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-red-600 mx-auto"></div>
-                                        </div>
-                                    ) : products.length === 0 ? (
-                                        <div className="p-8 text-center text-gray-500">
-                                            <p>No products found</p>
-                                        </div>
-                                    ) : (
-                                        <table className="w-full text-left">
-                                            <thead className="bg-gray-50 text-gray-500 text-xs uppercase font-bold">
-                                                <tr>
-                                                    <th className="px-6 py-4">Product Image</th>
-                                                    <th className="px-6 py-4">Product Name</th>
-                                                    <th className="px-6 py-4">Seller Store</th>
-                                                    <th className="px-6 py-4">Price</th>
-                                                    <th className="px-6 py-4">Stock</th>
-                                                    <th className="px-6 py-4">Status</th>
-                                                    <th className="px-6 py-4">Action</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-gray-50 text-sm">
-                                                {products.map((product) => (
-                                                    <tr key={product.id} className="hover:bg-gray-50 transition-colors">
-                                                        <td className="px-6 py-4">
-                                                            {product.images && product.images.length > 0 ? (
-                                                                <img
-                                                                    src={product.images[0]}
-                                                                    alt={product.name}
-                                                                    className="h-12 w-12 object-cover rounded"
-                                                                    onError={(e) => { e.target.src = 'https://via.placeholder.com/48?text=No+Image'; }}
-                                                                />
-                                                            ) : (
-                                                                <div className="h-12 w-12 bg-gray-200 rounded flex items-center justify-center text-xs text-gray-500">No Image</div>
-                                                            )}
-                                                        </td>
-                                                        <td className="px-6 py-4 text-gray-600 font-semibold">{product.name || 'N/A'}</td>
-                                                        <td className="px-6 py-4 text-gray-600">{product.shopName || 'N/A'}</td>
-                                                        <td className="px-6 py-4 text-gray-600">Rs. {product.price?.toFixed(2) || '0.00'}</td>
-                                                        <td className="px-6 py-4 text-gray-600">
-                                                            <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                                                                product.stockQuantity > 0 
-                                                                    ? 'bg-green-50 text-green-700' 
-                                                                    : 'bg-red-50 text-red-700'
-                                                            }`}>
-                                                                {product.stockQuantity || 0}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                                                                product.status === 'ACTIVE'
-                                                                    ? 'bg-blue-50 text-blue-700'
-                                                                    : product.status === 'SOLD'
-                                                                    ? 'bg-gray-50 text-gray-700'
-                                                                    : 'bg-yellow-50 text-yellow-700'
-                                                            }`}>
-                                                                {product.status || 'ACTIVE'}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <button
-                                                                onClick={() => handleDeleteProduct(product.id)}
-                                                                disabled={deleteLoading[product.id]}
-                                                                className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 font-semibold text-sm flex items-center gap-2"
-                                                                title="Delete Product"
-                                                            >
-                                                                <FaTrash size={14} />
-                                                                {deleteLoading[product.id] ? 'Deleting...' : 'Delete'}
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    )}
-                                </div>
-                            </div>
-                        </>
-                    )}
+                        </div>
+                    </div>
                 </div>
             </main>
         </div>
     );
 };
 
-const SidebarItem = ({ icon, label, active = false, onClick }) => (
-    <div 
-        onClick={onClick}
-        className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-colors ${active ? 'bg-red-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
-    >
+const SidebarItem = ({ icon, label, active = false }) => (
+    <div className={`flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-colors ${active ? 'bg-red-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}>
         {icon}
         <span className="font-medium text-sm">{label}</span>
     </div>
 );
 
-const StatCard = ({ icon, label, value, trend, warning }) => (
+const StatCard = ({ icon, label, value, trend, danger, warning }) => (
     <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
         <div className="flex justify-between items-start mb-4">
             <div className="p-3 bg-gray-50 rounded-lg">
@@ -487,7 +225,7 @@ const StatCard = ({ icon, label, value, trend, warning }) => (
             <h4 className="text-gray-500 text-sm font-medium">{label}</h4>
             <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-gray-800">{value}</span>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${warning ? 'bg-yellow-100 text-yellow-600' : 'bg-green-100 text-green-600'}`}>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${danger ? 'bg-red-100 text-red-600' : warning ? 'bg-yellow-100 text-yellow-600' : 'bg-green-100 text-green-600'}`}>
                     {trend}
                 </span>
             </div>
@@ -495,66 +233,37 @@ const StatCard = ({ icon, label, value, trend, warning }) => (
     </div>
 );
 
-const TableRow = ({ app, onApprove, onReject, isLoading }) => (
-    <tr className="hover:bg-gray-50 transition-colors">
-        <td className="px-6 py-4 text-gray-600 font-semibold">{app.shopName}</td>
-        <td className="px-6 py-4 text-gray-600">{app.userName || 'N/A'}</td>
-        <td className="px-6 py-4 text-gray-600 text-xs">{app.city}, {app.district}</td>
-        <td className="px-6 py-4 text-gray-600 text-xs">
-            <span className="bg-blue-50 px-2 py-1 rounded">{app.shopCategories?.join(', ') || 'N/A'}</span>
-        </td>
-        <td className="px-6 py-4 text-gray-500 text-xs">{new Date(app.appliedAt).toLocaleDateString()}</td>
-        <td className="px-6 py-4">
-            <div className="flex gap-2">
-                <button
-                    onClick={() => onApprove(app.id)}
-                    disabled={isLoading}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 font-semibold text-sm"
-                    title="Approve"
-                >
-                    Approve
-                </button>
-                <button
-                    onClick={() => onReject(app.id)}
-                    disabled={isLoading}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 font-semibold text-sm"
-                    title="Reject"
-                >
-                    Reject
-                </button>
-            </div>
-        </td>
-    </tr>
-);
-
-const UserTableRow = ({ user }) => (
+const TableRow = ({ name, shop, date }) => (
     <tr className="hover:bg-gray-50 transition-colors">
         <td className="px-6 py-4 flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">
-                {(user.name || user.fullName || 'U').charAt(0).toUpperCase()}
+                {name.charAt(0)}
             </div>
-            <span className="font-semibold text-gray-800">{user.name || user.fullName || 'N/A'}</span>
+            <span className="font-semibold text-gray-800">{name}</span>
         </td>
-        <td className="px-6 py-4 text-gray-600">{user.email}</td>
-        <td className="px-6 py-4 text-gray-600 text-sm">{user.address || 'N/A'}</td>
-        <td className="px-6 py-4 text-gray-600 text-sm">{user.phone || 'N/A'}</td>
+        <td className="px-6 py-4 text-gray-600">{shop}</td>
+        <td className="px-6 py-4 text-gray-500 text-xs">{date}</td>
         <td className="px-6 py-4">
-            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                user.roles?.includes('ROLE_ADMIN') || user.roles?.includes('ADMIN')
-                    ? 'bg-red-100 text-red-700'
-                    : user.roles?.includes('ROLE_SELLER') || user.roles?.includes('SELLER')
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'bg-gray-100 text-gray-700'
-            }`}>
-                {user.roles?.includes('ROLE_ADMIN') || user.roles?.includes('ADMIN') 
-                    ? 'Admin'
-                    : user.roles?.includes('ROLE_SELLER') || user.roles?.includes('SELLER')
-                    ? 'Seller'
-                    : 'User'}
-            </span>
+            <div className="flex gap-2">
+                <button className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors">
+                    <FaCheckCircle />
+                </button>
+                <button className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                    <FaTimesCircle />
+                </button>
+            </div>
         </td>
     </tr>
 );
 
-export default AdminDashboard;
+const ActivityItem = ({ text, time, type }) => (
+    <div className="flex gap-4">
+        <div className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${type === 'danger' ? 'bg-red-500' : type === 'warning' ? 'bg-yellow-500' : 'bg-green-500'}`} />
+        <div>
+            <p className="text-sm text-gray-700 leading-tight">{text}</p>
+            <p className="text-[10px] text-gray-400 font-medium mt-1 uppercase tracking-wider">{time}</p>
+        </div>
+    </div>
+);
 
+export default AdminDashboard;
