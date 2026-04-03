@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
+import { ProfileAvatar } from './ProfileAvatar';
 
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -260,11 +261,12 @@ const Navbar = () => {
                                         onClick={() => setIsProfileOpen(!isProfileOpen)}
                                         className="flex items-center gap-2 p-1.5 rounded-full hover:bg-gray-50 transition-all duration-300 border border-transparent hover:border-gray-100"
                                     >
-                                        <div className="w-10 h-10 rounded-full border-2 border-white overflow-hidden shadow-sm group-hover:shadow-md transition-all">
-                                            <img 
-                                                src={user?.profilePhotoUrl || 'https://placehold.co/40'} 
-                                                alt="Profile" 
-                                                className="w-full h-full object-cover"
+                                        <div className="group-hover:shadow-md transition-all">
+                                            <ProfileAvatar
+                                              profilePhotoUrl={user?.profilePhotoUrl}
+                                              name={user?.name || 'User'}
+                                              size="sm"
+                                              ringClass="border-2 border-white shadow-sm"
                                             />
                                         </div>
                                         <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 text-gray-400 transition-transform duration-300 ${isProfileOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -278,10 +280,11 @@ const Navbar = () => {
                                             <div className="fixed inset-0 z-40" onClick={() => setIsProfileOpen(false)}></div>
                                             <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-gray-100 z-50 overflow-hidden transform animate-in fade-in slide-in-from-top-2 duration-200">
                                                 <div className="p-5 bg-gradient-to-br from-gray-50 to-white flex items-center gap-4 border-b border-gray-100">
-                                                    <img 
-                                                        src={user?.profilePhotoUrl || 'https://placehold.co/40'} 
-                                                        className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
-                                                        alt="Profile"
+                                                    <ProfileAvatar
+                                                      profilePhotoUrl={user?.profilePhotoUrl}
+                                                      name={user?.name || 'User'}
+                                                      size="md"
+                                                      ringClass="border-2 border-white shadow-sm"
                                                     />
                                                     <div>
                                                         <div className="text-sm font-black text-slate-900 uppercase tracking-tight truncate max-w-[130px]">{user?.name}</div>
@@ -470,10 +473,11 @@ const Navbar = () => {
                     {isAuthenticated ? (
                         <>
                             <div className="flex items-center gap-4 p-2 bg-gray-50 rounded-2xl">
-                                <img 
-                                    src={user?.profilePhotoUrl || 'https://placehold.co/40'} 
-                                    className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
-                                    alt="Profile"
+                                <ProfileAvatar
+                                  profilePhotoUrl={user?.profilePhotoUrl}
+                                  name={user?.name || 'User'}
+                                  size="md"
+                                  ringClass="border-2 border-white shadow-sm"
                                 />
                                 <div>
                                     <div className="text-sm font-black text-gray-900 uppercase tracking-tight">{user?.name}</div>

@@ -51,9 +51,13 @@ export const SellerRoute = ({ children }) => {
     );
   }
 
-  if (!isAuthenticated || (user?.role !== 'SELLER' && user?.role !== 'ADMIN')) {
+  const isSeller = user?.role === 'SELLER' || user?.role === 'ROLE_SELLER' || user?.roles?.includes('ROLE_SELLER') || user?.hasShop;
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'ROLE_ADMIN' || user?.roles?.includes('ROLE_ADMIN') || user?.roles?.includes('ADMIN');
+
+  if (!isAuthenticated || (!isSeller && !isAdmin)) {
     return <Navigate to="/become-seller" replace />;
   }
 
   return children;
 };
+
