@@ -5,22 +5,21 @@ import Footer from './components/Footer';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import BecomeSeller from './pages/BecomeSeller';
-import ApplicationSubmitted from './pages/ApplicationSubmitted';
 import AboutUs from './pages/AboutUs';
 import ContactUs from './pages/ContactUs';
 import AdminDashboard from './pages/AdminDashboard';
 import SellerDashboard from './pages/SellerDashboard';
 import Products from './pages/Products';
 import AccountProfile from './pages/AccountProfile';
-import NotificationsPage from './pages/NotificationsPage';
 import PaymentSuccess from './pages/PaymentSuccess';
 import PaymentCancel from './pages/PaymentCancel';
+import ApplicationSubmitted from './pages/ApplicationSubmitted';
 import { LanguageProvider } from './context/LanguageContext';
 import { AuthProvider } from './context/AuthContext';
 import { WishlistProvider } from './context/WishlistContext';
 import { ProtectedRoute, AdminRoute } from './components/ProtectedRoute';
 import ConditionalFloatingWishlistButton from './components/ConditionalFloatingWishlistButton';
-
+import NotificationsPage from './pages/NotificationsPage';
 
 import { Toaster } from 'react-hot-toast';
 import CategoryGrid from './components/CategoryGrid';
