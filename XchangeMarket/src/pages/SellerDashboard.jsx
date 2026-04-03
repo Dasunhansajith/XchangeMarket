@@ -17,6 +17,15 @@ const SellerDashboard = () => {
     const [editingProduct, setEditingProduct] = useState(null);
     const [applicationStatus, setApplicationStatus] = useState(null);
     const [applicationLoading, setApplicationLoading] = useState(true);
+    const [trackingModalOpen, setTrackingModalOpen] = useState(false);
+    const [selectedOrderForTracking, setSelectedOrderForTracking] = useState(null);
+    const [trackingFormData, setTrackingFormData] = useState({
+        newStage: '',
+        courierName: '',
+        trackingNumber: ''
+    });
+    const [isSubmittingTracking, setIsSubmittingTracking] = useState(false);
+    const [trackingStatuses, setTrackingStatuses] = useState({});
 
     const [formData, setFormData] = useState({
         name: '',
@@ -28,6 +37,84 @@ const SellerDashboard = () => {
     });
 
     const [imagePreviews, setImagePreviews] = useState([]);
+
+    const handleImageChange = (e) => {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+
+        // Limit total images to 5
+        if (formData.images.length + files.length > 5) {
+            toast.error("You can only upload up to 5 images");
+            return;
+        }
+
+        files.forEach(file => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64String = reader.result;
+                setFormData(prev => ({
+                    ...prev,
+                    images: [...prev.images, base64String]
+                }));
+                setImagePreviews(prev => [...prev, base64String]);
+            };
+            reader.readAsDataURL(file);
+        });
+    };
+
+    const removeImage = (index) => {
+        setFormData(prev => ({
+            ...prev,
+            images: prev.images.filter((_, i) => i !== index)
+        }));
+        setImagePreviews(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const fetchMyProducts = useCallback(async () => {
+        try {
+            setLoading(true);
+            const response = await productAPI.getMyProducts();
+            setProducts(response.data);
+            setError(null);
+        } catch (err) {
+            console.error('Error fetching products:', err);
+            setError('Failed to load products. Please try again.');
+            toast.error('Failed to load products');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    const fetchOrders = useCallback(async () => {
+        try {
+            setOrdersLoading(true);
+            const response = await orderAPI.getSellerOrders();
+            const ordersList = Array.isArray(response.data) ? response.data : [];
+            setOrders(ordersList);
+            setError(null);
+
+            // Fetch tracking status for all accepted/delivered orders
+            const trackingMap = {};
+            for (const order of ordersList) {
+                if (order.status === 'ACCEPTED' || order.status === 'DELIVERED') {
+                    try {
+                        const trackingRes = await orderAPI.getTracking(order.id);
+                        trackingMap[order.id] = trackingRes.data?.status || null;
+                    } catch (err) {
+                        // Tracking not found, skip
+                        trackingMap[order.id] = null;
+                    }
+                }
+            }
+            setTrackingStatuses(trackingMap);
+        } catch (err) {
+            console.error('Error fetching orders:', err);
+            setError('Failed to load orders. Please refresh the page.');
+            toast.error('Failed to load orders');
+        } finally {
+            setOrdersLoading(false);
+        }
+    }, []);
 
     // Fetch seller application status
     useEffect(() => {
@@ -103,68 +190,6 @@ const SellerDashboard = () => {
         );
     }
 
-    const handleImageChange = (e) => {
-        const files = Array.from(e.target.files);
-        if (files.length === 0) return;
-
-        // Limit total images to 5
-        if (formData.images.length + files.length > 5) {
-            toast.error("You can only upload up to 5 images");
-            return;
-        }
-
-        files.forEach(file => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const base64String = reader.result;
-                setFormData(prev => ({
-                    ...prev,
-                    images: [...prev.images, base64String]
-                }));
-                setImagePreviews(prev => [...prev, base64String]);
-            };
-            reader.readAsDataURL(file);
-        });
-    };
-
-    const removeImage = (index) => {
-        setFormData(prev => ({
-            ...prev,
-            images: prev.images.filter((_, i) => i !== index)
-        }));
-        setImagePreviews(prev => prev.filter((_, i) => i !== index));
-    };
-
-    const fetchMyProducts = useCallback(async () => {
-        try {
-            setLoading(true);
-            const response = await productAPI.getMyProducts();
-            setProducts(response.data);
-            setError(null);
-        } catch (err) {
-            console.error('Error fetching products:', err);
-            setError('Failed to load products. Please try again.');
-            toast.error('Failed to load products');
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    const fetchOrders = useCallback(async () => {
-        try {
-            setOrdersLoading(true);
-            console.log("Fetching orders for seller...");
-            const response = await orderAPI.getSellerOrders();
-            console.log("Orders response received:", response.data);
-            setOrders(Array.isArray(response.data) ? response.data : []);
-        } catch (err) {
-            console.error('Error fetching orders:', err);
-            toast.error('Failed to load orders');
-        } finally {
-            setOrdersLoading(false);
-        }
-    }, [orderAPI]);
-
     useEffect(() => {
         fetchMyProducts();
         fetchOrders();
@@ -188,6 +213,93 @@ const SellerDashboard = () => {
         } catch (err) {
             toast.error('Failed to decline order');
         }
+    };
+
+    const handleOpenTrackingModal = async (order) => {
+        try {
+            setOrdersLoading(true);
+            let response;
+            
+            try {
+                // Try to get existing tracking
+                response = await orderAPI.getTracking(order.id);
+            } catch (err) {
+                // If not found, create a new tracking record automatically
+                if (err.response?.status === 404) {
+                    try {
+                        await orderAPI.createTracking(order.id);
+                        response = await orderAPI.getTracking(order.id);
+                    } catch (createErr) {
+                        throw createErr;
+                    }
+                } else {
+                    throw err;
+                }
+            }
+
+            const trackingData = response.data;
+            
+            // In the backend, the current status is stored in the 'status' field
+            const status = trackingData.status || 'PLACED';
+            
+            // Determine the next logical milestone (sequential order)
+            const stagesList = ['PLACED', 'PACKED', 'SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED'];
+            const currentIndex = stagesList.indexOf(status);
+            const nextStage = (currentIndex !== -1 && currentIndex < stagesList.length - 1) 
+                ? stagesList[currentIndex + 1] 
+                : '';
+
+            setSelectedOrderForTracking({
+                ...order,
+                currentTracking: trackingData,
+                currentStage: status
+            });
+            
+            setTrackingFormData({
+                newStage: nextStage, // ✅ Auto-populated based on sequence
+                courierName: trackingData.courierName || '',
+                trackingNumber: trackingData.trackingNumber || ''
+            });
+            
+            setTrackingModalOpen(true);
+        } catch (err) {
+            console.error('Error fetching tracking:', err);
+            toast.error('Failed to update tracking: Please try again');
+        } finally {
+            setOrdersLoading(false);
+        }
+    };
+
+    const handleUpdateTracking = async (e) => {
+        e.preventDefault();
+        if (!trackingFormData.newStage) {
+            toast.error('Please select a stage');
+            return;
+        }
+
+        try {
+            setIsSubmittingTracking(true);
+            await orderAPI.updateTracking(selectedOrderForTracking.id, trackingFormData);
+            toast.success(`Order marked as ${trackingFormData.newStage.replace(/_/g, ' ')}`);
+            setTrackingModalOpen(false);
+            fetchOrders(); // Refresh table
+        } catch (err) {
+            console.error('Error updating tracking:', err);
+            const errorMsg = err.response?.data?.message || 'Failed to update tracking';
+            toast.error(errorMsg);
+        } finally {
+            setIsSubmittingTracking(false);
+        }
+    };
+
+    const getValidNextStages = (currentStage) => {
+        const stages = ['PLACED', 'PACKED', 'SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED'];
+        const currentIndex = stages.indexOf(currentStage);
+        
+        if (currentIndex === -1 || currentIndex === stages.length - 1) return [];
+        
+        // Return ONLY the immediate next stage to prevent skipping
+        return [stages[currentIndex + 1]];
     };
 
     const handleAddProductClick = (e) => {
@@ -306,16 +418,29 @@ const SellerDashboard = () => {
                                         <FaClipboardList />
                                     </div>
                                     <div>
-                                        <h4 className="font-bold text-gray-800 text-sm">Order #{order.id.slice(-6)}</h4>
+                                        <h4 className="font-bold text-gray-800 text-sm">Order #{order.id ? order.id.slice(-6) : 'N/A'}</h4>
                                         <p className="text-gray-500 text-xs">{order.items?.[0]?.name} (Qty: {order.items?.[0]?.quantity})</p>
                                         <div className="flex items-center gap-2 mt-1">
-                                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
-                                                order.status === 'PENDING' ? 'bg-yellow-100 text-yellow-600' :
-                                                order.status === 'ACCEPTED' ? 'bg-green-100 text-green-600' :
-                                                'bg-red-100 text-red-600'
-                                            }`}>
-                                                {order.status}
-                                            </span>
+                                            {(() => {
+                                                const displayStatus = order.status === 'ACCEPTED' && trackingStatuses[order.id]
+                                                    ? trackingStatuses[order.id]
+                                                    : order.status === 'ACCEPTED'
+                                                    ? 'PLACED'
+                                                    : order.status;
+                                                
+                                                let colorClass = 'bg-gray-100 text-gray-600';
+                                                if (displayStatus === 'PENDING') colorClass = 'bg-yellow-100 text-yellow-600';
+                                                else if (displayStatus === 'PLACED' || displayStatus === 'PACKED') colorClass = 'bg-blue-100 text-blue-600';
+                                                else if (displayStatus === 'SHIPPED' || displayStatus === 'OUT_FOR_DELIVERY') colorClass = 'bg-orange-100 text-orange-600';
+                                                else if (displayStatus === 'DELIVERED') colorClass = 'bg-green-100 text-green-600';
+                                                else if (displayStatus === 'DECLINED') colorClass = 'bg-red-100 text-red-600';
+                                                
+                                                return (
+                                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${colorClass}`}>
+                                                        {displayStatus.replace(/_/g, ' ')}
+                                                    </span>
+                                                );
+                                            })()}
                                             <span className="text-gray-400 text-[10px]">{new Date(order.createdAt).toLocaleDateString()}</span>
                                         </div>
                                     </div>
@@ -445,7 +570,7 @@ const SellerDashboard = () => {
                         {orders.map((order) => (
                             <tr key={order.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition">
                                 <td className="px-6 py-4">
-                                    <div className="font-bold text-gray-800 text-sm">#{order.id.slice(-8)}</div>
+                                    <div className="font-bold text-gray-800 text-sm">#{order.id ? order.id.slice(-8) : 'N/A'}</div>
                                     <div className="text-xs text-gray-500">{order.items?.[0]?.name}...</div>
                                     <div className="text-[10px] text-gray-400 mt-1">{new Date(order.createdAt).toLocaleString()}</div>
                                 </td>
@@ -458,13 +583,26 @@ const SellerDashboard = () => {
                                 </td>
                                 <td className="px-6 py-4 text-gray-800 font-bold text-sm">Rs {order.totalPrice?.toLocaleString()}</td>
                                 <td className="px-6 py-4">
-                                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${
-                                        order.status === 'PENDING' ? 'bg-yellow-100 text-yellow-600' :
-                                        order.status === 'ACCEPTED' ? 'bg-green-100 text-green-600' :
-                                        'bg-red-100 text-red-600'
-                                    }`}>
-                                        {order.status}
-                                    </span>
+                                    {(() => {
+                                        const displayStatus = order.status === 'ACCEPTED' && trackingStatuses[order.id]
+                                            ? trackingStatuses[order.id]
+                                            : order.status === 'ACCEPTED'
+                                            ? 'PLACED'
+                                            : order.status;
+                                        
+                                        let colorClass = 'bg-gray-100 text-gray-600';
+                                        if (displayStatus === 'PENDING') colorClass = 'bg-yellow-100 text-yellow-600';
+                                        else if (displayStatus === 'PLACED' || displayStatus === 'PACKED') colorClass = 'bg-blue-100 text-blue-600';
+                                        else if (displayStatus === 'SHIPPED' || displayStatus === 'OUT_FOR_DELIVERY') colorClass = 'bg-orange-100 text-orange-600';
+                                        else if (displayStatus === 'DELIVERED') colorClass = 'bg-green-100 text-green-600';
+                                        else if (displayStatus === 'DECLINED') colorClass = 'bg-red-100 text-red-600';
+                                        
+                                        return (
+                                            <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${colorClass}`}>
+                                                {displayStatus.replace(/_/g, ' ')}
+                                            </span>
+                                        );
+                                    })()}
                                 </td>
                                 <td className="px-6 py-4 text-center">
                                     {order.status === 'PENDING' ? (
@@ -484,15 +622,53 @@ const SellerDashboard = () => {
                                                 <FaTimes size={12} />
                                             </button>
                                         </div>
+                                    ) : order.status === 'ACCEPTED' ? (
+                                        <div className="flex flex-col gap-2 items-center">
+                                            <button 
+                                                onClick={() => handleOpenTrackingModal(order)}
+                                                className="px-3 py-1.5 bg-indigo-600 text-white text-[10px] font-black uppercase rounded-lg hover:bg-indigo-700 transition shadow-sm flex items-center gap-2"
+                                            >
+                                                <FaBox size={10} /> Update Status
+                                            </button>
+                                            
+                                            {/* Minimal tracking info if available */}
+                                            {(order.courierName || order.trackingNumber) && (
+                                                <div className="text-[9px] text-gray-400 font-medium text-center">
+                                                    {order.courierName && <div>{order.courierName}</div>}
+                                                    {order.trackingNumber && <div className="truncate max-w-[80px]">#{order.trackingNumber}</div>}
+                                                </div>
+                                            )}
+                                        </div>
                                     ) : (
-                                        <span className="text-xs text-gray-400 font-medium font-bold uppercase">{order.status}</span>
+                                        <span className="text-xs text-gray-400 font-black font-bold uppercase">{order.status}</span>
                                     )}
                                 </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
-                {!ordersLoading && orders.length === 0 && (
+
+                {/* Loading state */}
+                {ordersLoading && orders.length === 0 && (
+                    <div className="py-20 text-center text-red-600">
+                        <FaSpinner className="animate-spin text-4xl mx-auto mb-4" />
+                        <p>Loading your orders...</p>
+                    </div>
+                )}
+
+                {/* Error state */}
+                {error && orders.length === 0 && (
+                    <div className="py-20 text-center text-red-500">
+                        <FaExclamationTriangle className="text-4xl mx-auto mb-4" />
+                        <p>{error}</p>
+                        <button onClick={fetchOrders} className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+                            Retry Fetching
+                        </button>
+                    </div>
+                )}
+
+                {/* Empty state */}
+                {!ordersLoading && !error && orders.length === 0 && (
                     <div className="py-20 text-center text-gray-500">
                         <FaClipboardList className="text-5xl mx-auto mb-4 opacity-10" />
                         <p>No orders yet. Keep up the good work!</p>
@@ -691,9 +867,134 @@ const SellerDashboard = () => {
         </div>
     );
 
+    const renderTrackingModal = () => {
+        if (!selectedOrderForTracking) return null;
+        
+        const validNextStages = getValidNextStages(selectedOrderForTracking.currentStage);
+        const isCompleted = selectedOrderForTracking.currentStage === 'DELIVERED';
+
+        return (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 overflow-y-auto">
+                <motion.div
+                    initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    className="bg-white rounded-[2rem] shadow-2xl max-w-md w-full p-8 border border-gray-100 flex flex-col gap-6"
+                >
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <h3 className="text-2xl font-black text-gray-800">Update Shipment</h3>
+                            <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Order #{selectedOrderForTracking.id.slice(-8)}</p>
+                        </div>
+                        <button 
+                            onClick={() => setTrackingModalOpen(false)}
+                            className="p-2 hover:bg-gray-50 rounded-xl text-gray-400 transition"
+                        >
+                            <FaTimes />
+                        </button>
+                    </div>
+
+                    <form onSubmit={handleUpdateTracking} className="space-y-6">
+                        <div className="space-y-4">
+                            <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-2xl">
+                                <div className="text-[10px] text-indigo-400 font-black uppercase tracking-widest mb-1">Current Status</div>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(79,70,229,0.5)]"></div>
+                                    <div className="font-bold text-indigo-900 text-sm">{selectedOrderForTracking.currentStage.replace(/_/g, ' ')}</div>
+                                </div>
+                            </div>
+
+                            {!isCompleted ? (
+                                <div className="space-y-2">
+                                    <label className="text-[10px] text-gray-400 font-black uppercase tracking-widest px-1">Next Milestone</label>
+                                    <div className="relative group">
+                                        <select
+                                            required
+                                            value={trackingFormData.newStage}
+                                            onChange={(e) => setTrackingFormData({ ...trackingFormData, newStage: e.target.value })}
+                                            className="w-full pl-5 pr-10 py-4 bg-gray-50 border-none rounded-2xl text-sm font-bold text-gray-700 focus:ring-2 focus:ring-indigo-100 transition-all appearance-none outline-none group-hover:bg-gray-100"
+                                        >
+                                            <option value="">Select Stage</option>
+                                            {validNextStages.map(stage => (
+                                                <option key={stage} value={stage}>{stage.replace(/_/g, ' ')}</option>
+                                            ))}
+                                        </select>
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none group-hover:text-indigo-400 transition-colors">
+                                            <FaPlus size={12} />
+                                        </div>
+                                    </div>
+                                    <p className="text-[10px] text-gray-400 italic px-1">* You can only progress one step at a time</p>
+                                    <p className="text-[10px] text-indigo-500 font-bold px-1 mt-1">
+                                        Tracking details required only when order is out for delivery
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-3">
+                                    <FaCheck className="text-emerald-500" />
+                                    <span className="text-emerald-900 text-sm font-bold">This order has been successfully delivered.</span>
+                                </div>
+                            )}
+
+                            {/* ✅ NEW: Only show courier/tracking inputs for OUT_FOR_DELIVERY stage */}
+                            {!isCompleted && trackingFormData.newStage === 'OUT_FOR_DELIVERY' && (
+                                <motion.div 
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    className="grid grid-cols-1 gap-4 overflow-hidden"
+                                >
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] text-gray-400 font-black uppercase tracking-widest px-1">Courier Service</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            placeholder="e.g. Aramex, Sri Lanka Post"
+                                            value={trackingFormData.courierName}
+                                            onChange={(e) => setTrackingFormData({ ...trackingFormData, courierName: e.target.value })}
+                                            className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl text-sm font-bold text-gray-700 placeholder:text-gray-300 focus:ring-2 focus:ring-indigo-100 transition-all outline-none"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] text-gray-400 font-black uppercase tracking-widest px-1">Tracking ID</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            placeholder="e.g. TRK459203"
+                                            value={trackingFormData.trackingNumber}
+                                            onChange={(e) => setTrackingFormData({ ...trackingFormData, trackingNumber: e.target.value })}
+                                            className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl text-sm font-bold text-gray-700 placeholder:text-gray-300 focus:ring-2 focus:ring-indigo-100 transition-all outline-none"
+                                        />
+                                    </div>
+                                </motion.div>
+                            )}
+                        </div>
+
+                        {!isCompleted && (
+                            <div className="flex gap-3 pt-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setTrackingModalOpen(false)}
+                                    className="flex-1 py-4 bg-gray-50 text-gray-400 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-gray-100 transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSubmittingTracking || !trackingFormData.newStage}
+                                    className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100"
+                                >
+                                    {isSubmittingTracking ? 'Updating...' : 'Update Status'}
+                                </button>
+                            </div>
+                        )}
+                    </form>
+                </motion.div>
+            </div>
+        );
+    };
+
     return (
         <div className="min-h-screen bg-gray-50 py-8">
             {showConfirmModal && renderConfirmModal()}
+            {trackingModalOpen && renderTrackingModal()}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex flex-col md:flex-row gap-8">
 

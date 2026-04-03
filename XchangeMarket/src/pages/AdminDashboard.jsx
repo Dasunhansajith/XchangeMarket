@@ -11,10 +11,11 @@ import { adminAPI, userAPI, productAPI } from '../services/api';
 const AdminDashboard = () => {
     const { user } = useAuth();
     const [activeTab, setActiveTab] = useState('dashboard');
+    const [applicationFilter, setApplicationFilter] = useState('PENDING');
     const [stats, setStats] = useState({
         totalUsers: 0,
         usersRegisteredToday: 0,
-        pendingSellers: 0,
+        totalSellers: 0,
         activeAds: 0,
         productsAddedToday: 0
     });
@@ -39,11 +40,13 @@ const AdminDashboard = () => {
     const fetchStats = async () => {
         try {
             const productsRes = await productAPI.getAllProducts();
-            const products = (Array.isArray(productsRes.data) ? productsRes.data : productsRes.data?.data) || [];
+            const products = Array.isArray(productsRes.data) ? productsRes.data : [];
+            console.log('Products fetched:', products.length);
             
             // Fetch users count
             const usersRes = await userAPI.getAllUsers();
             const usersList = Array.isArray(usersRes.data) ? usersRes.data : [];
+            console.log('Users fetched:', usersList.length);
             
             // Calculate today's date
             const today = new Date();
@@ -72,7 +75,7 @@ const AdminDashboard = () => {
             }));
         } catch (err) {
             console.error('Error fetching stats:', err);
-            console.log('Full response:', err);
+            console.error('Error response:', err.response?.data || err.message);
         }
     };
 
@@ -80,17 +83,19 @@ const AdminDashboard = () => {
         try {
             setLoading(true);
             const response = await adminAPI.getAllSellerApplications();
-            const apps = response.data || [];
+            const apps = Array.isArray(response.data) ? response.data : [];
+            console.log('Seller applications fetched:', apps.length);
             setApplications(apps);
             
             // Calculate stats
-            const pendingCount = apps.filter(app => app.status === 'PENDING').length;
+            const totalCount = apps.length;
             setStats(prev => ({
                 ...prev,
-                pendingSellers: pendingCount
+                totalSellers: totalCount
             }));
         } catch (err) {
             console.error('Error fetching applications:', err);
+            console.error('Error response:', err.response?.data || err.message);
             toast.error('Failed to load seller applications');
         } finally {
             setLoading(false);
@@ -101,9 +106,12 @@ const AdminDashboard = () => {
         try {
             setLoading(true);
             const response = await userAPI.getAllUsers();
-            setUsers(response.data || []);
+            const userList = Array.isArray(response.data) ? response.data : [];
+            console.log('Users fetched:', userList.length);
+            setUsers(userList);
         } catch (err) {
             console.error('Error fetching users:', err);
+            console.error('Error response:', err.response?.data || err.message);
             toast.error('Failed to load users');
         } finally {
             setLoading(false);
@@ -114,9 +122,12 @@ const AdminDashboard = () => {
         try {
             setLoading(true);
             const response = await productAPI.getAllProducts();
-            setProducts(Array.isArray(response.data) ? response.data : []);
+            const productList = Array.isArray(response.data) ? response.data : [];
+            console.log('Products fetched:', productList.length);
+            setProducts(productList);
         } catch (err) {
             console.error('Error fetching products:', err);
+            console.error('Error response:', err.response?.data || err.message);
             toast.error('Failed to load products');
         } finally {
             setLoading(false);
@@ -182,7 +193,7 @@ const AdminDashboard = () => {
         }
     };
 
-    const pendingApplications = applications.filter(app => app.status === 'PENDING');
+    const filteredApplications = applications.filter(app => app.status === applicationFilter);
 
     return (
         <div className="min-h-screen bg-gray-50 flex">
@@ -232,7 +243,7 @@ const AdminDashboard = () => {
                         <button className="relative text-gray-400 hover:text-gray-600">
                             <FaBell size={20} />
                             <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full">
-                                {pendingApplications.length}
+                                {applications.filter(app => app.status === 'PENDING').length}
                             </span>
                         </button>
                         <div className="flex items-center gap-3">
@@ -271,10 +282,10 @@ const AdminDashboard = () => {
                                 />
                                 <StatCard
                                     icon={<FaChartLine color="#dc2626" />}
-                                    label="Pending Seller Applications"
-                                    value={stats.pendingSellers}
-                                    trend={`${stats.pendingSellers} awaiting approval`}
-                                    warning={stats.pendingSellers > 0}
+                                    label="No of Sellers"
+                                    value={stats.totalSellers}
+                                    trend={`${applications.filter(app => app.status === 'PENDING').length} awaiting approval`}
+                                    warning={applications.filter(app => app.status === 'PENDING').length > 0}
                                 />
                                 <StatCard
                                     icon={<FaCar color="#dc2626" />}
@@ -284,20 +295,51 @@ const AdminDashboard = () => {
                                 />
                             </motion.div>
 
-                            {/* Pending Approvals Table */}
+                            {/* Seller Applications Table with Filters */}
                             <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-                                <div className="p-6 border-b border-gray-50 flex justify-between items-center">
-                                    <h3 className="font-bold text-gray-800">Pending Seller Applications</h3>
-                                    <span className="text-sm text-gray-500">{pendingApplications.length} pending</span>
+                                <div className="p-6 border-b border-gray-50">
+                                    <h3 className="font-bold text-gray-800 mb-4">Seller Applications</h3>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setApplicationFilter('PENDING')}
+                                            className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                                                applicationFilter === 'PENDING'
+                                                    ? 'bg-red-600 text-white'
+                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                            }`}
+                                        >
+                                            Pending ({applications.filter(app => app.status === 'PENDING').length})
+                                        </button>
+                                        <button
+                                            onClick={() => setApplicationFilter('APPROVED')}
+                                            className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                                                applicationFilter === 'APPROVED'
+                                                    ? 'bg-green-600 text-white'
+                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                            }`}
+                                        >
+                                            Approved ({applications.filter(app => app.status === 'APPROVED').length})
+                                        </button>
+                                        <button
+                                            onClick={() => setApplicationFilter('REJECTED')}
+                                            className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                                                applicationFilter === 'REJECTED'
+                                                    ? 'bg-red-500 text-white'
+                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                            }`}
+                                        >
+                                            Rejected ({applications.filter(app => app.status === 'REJECTED').length})
+                                        </button>
+                                    </div>
                                 </div>
                                 <div className="overflow-x-auto">
                                     {loading ? (
                                         <div className="p-8 text-center">
                                             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-red-600 mx-auto"></div>
                                         </div>
-                                    ) : pendingApplications.length === 0 ? (
+                                    ) : filteredApplications.length === 0 ? (
                                         <div className="p-8 text-center text-gray-500">
-                                            <p>No pending applications</p>
+                                            <p>No {applicationFilter.toLowerCase()} applications</p>
                                         </div>
                                     ) : (
                                         <table className="w-full text-left">
@@ -308,17 +350,19 @@ const AdminDashboard = () => {
                                                     <th className="px-6 py-4">Location</th>
                                                     <th className="px-6 py-4">Categories</th>
                                                     <th className="px-6 py-4">Applied Date</th>
-                                                    <th className="px-6 py-4">Action</th>
+                                                    <th className="px-6 py-4">Status</th>
+                                                    {applicationFilter === 'PENDING' && <th className="px-6 py-4">Action</th>}
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-gray-50 text-sm">
-                                                {pendingApplications.map((app) => (
+                                                {filteredApplications.map((app) => (
                                                     <TableRow
                                                         key={app.id}
                                                         app={app}
                                                         onApprove={handleApprove}
                                                         onReject={handleReject}
                                                         isLoading={appLoading[app.id]}
+                                                        showAction={applicationFilter === 'PENDING'}
                                                     />
                                                 ))}
                                             </tbody>
@@ -495,37 +539,61 @@ const StatCard = ({ icon, label, value, trend, warning }) => (
     </div>
 );
 
-const TableRow = ({ app, onApprove, onReject, isLoading }) => (
-    <tr className="hover:bg-gray-50 transition-colors">
-        <td className="px-6 py-4 text-gray-600 font-semibold">{app.shopName}</td>
-        <td className="px-6 py-4 text-gray-600">{app.userName || 'N/A'}</td>
-        <td className="px-6 py-4 text-gray-600 text-xs">{app.city}, {app.district}</td>
-        <td className="px-6 py-4 text-gray-600 text-xs">
-            <span className="bg-blue-50 px-2 py-1 rounded">{app.shopCategories?.join(', ') || 'N/A'}</span>
-        </td>
-        <td className="px-6 py-4 text-gray-500 text-xs">{new Date(app.appliedAt).toLocaleDateString()}</td>
-        <td className="px-6 py-4">
-            <div className="flex gap-2">
-                <button
-                    onClick={() => onApprove(app.id)}
-                    disabled={isLoading}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 font-semibold text-sm"
-                    title="Approve"
-                >
-                    Approve
-                </button>
-                <button
-                    onClick={() => onReject(app.id)}
-                    disabled={isLoading}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 font-semibold text-sm"
-                    title="Reject"
-                >
-                    Reject
-                </button>
-            </div>
-        </td>
-    </tr>
-);
+const TableRow = ({ app, onApprove, onReject, isLoading, showAction }) => {
+    const getStatusBadge = (status) => {
+        switch (status) {
+            case 'PENDING':
+                return <span className="bg-yellow-50 text-yellow-700 px-3 py-1 rounded-full text-xs font-semibold">Pending</span>;
+            case 'APPROVED':
+                return <span className="bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">Approved</span>;
+            case 'REJECTED':
+                return <span className="bg-red-50 text-red-700 px-3 py-1 rounded-full text-xs font-semibold">Rejected</span>;
+            default:
+                return <span className="bg-gray-50 text-gray-700 px-3 py-1 rounded-full text-xs font-semibold">{status}</span>;
+        }
+    };
+
+    return (
+        <tr className="hover:bg-gray-50 transition-colors">
+            <td className="px-6 py-4 text-gray-600 font-semibold">{app.shopName}</td>
+            <td className="px-6 py-4 text-gray-600">{app.userName || 'N/A'}</td>
+            <td className="px-6 py-4 text-gray-600 text-xs">{app.city}, {app.district}</td>
+            <td className="px-6 py-4 text-gray-600 text-xs">
+                <span className="bg-blue-50 px-2 py-1 rounded">{app.shopCategories?.join(', ') || 'N/A'}</span>
+            </td>
+            <td className="px-6 py-4 text-gray-500 text-xs">{new Date(app.appliedAt).toLocaleDateString()}</td>
+            <td className="px-6 py-4">
+                {getStatusBadge(app.status)}
+            </td>
+            {showAction && (
+                <td className="px-6 py-4">
+                    {app.status === 'PENDING' ? (
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => onApprove(app.id)}
+                                disabled={isLoading}
+                                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 font-semibold text-sm"
+                                title="Approve"
+                            >
+                                Approve
+                            </button>
+                            <button
+                                onClick={() => onReject(app.id)}
+                                disabled={isLoading}
+                                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 font-semibold text-sm"
+                                title="Reject"
+                            >
+                                Reject
+                            </button>
+                        </div>
+                    ) : (
+                        <span className="text-gray-500 text-sm">—</span>
+                    )}
+                </td>
+            )}
+        </tr>
+    );
+};
 
 const UserTableRow = ({ user }) => (
     <tr className="hover:bg-gray-50 transition-colors">
