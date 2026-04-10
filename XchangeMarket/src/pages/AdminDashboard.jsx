@@ -3,8 +3,10 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import {
     FaUsers, FaCar, FaChartLine,
-    FaCheckCircle, FaTimesCircle, FaEllipsisV, FaSearch, FaBell, FaTrash
+    FaCheckCircle, FaTimesCircle, FaEllipsisV, FaSearch, FaBell, FaTrash,
+    FaShoppingCart, FaDollarSign
 } from 'react-icons/fa';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../context/AuthContext';
 import { adminAPI, userAPI, productAPI } from '../services/api';
 
@@ -17,7 +19,11 @@ const AdminDashboard = () => {
         usersRegisteredToday: 0,
         totalSellers: 0,
         activeAds: 0,
-        productsAddedToday: 0
+        productsAddedToday: 0,
+        totalOrders: 0,
+        ordersPlacedToday: 0,
+        totalRevenue: 0,
+        revenueChangePercent: 0
     });
     const [applications, setApplications] = useState([]);
     const [users, setUsers] = useState([]);
@@ -25,6 +31,7 @@ const AdminDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [appLoading, setAppLoading] = useState({});
     const [deleteLoading, setDeleteLoading] = useState({});
+    const [weeklyRevenueData, setWeeklyRevenueData] = useState([]);
 
     useEffect(() => {
         if (activeTab === 'dashboard') {
@@ -48,6 +55,11 @@ const AdminDashboard = () => {
             const usersList = Array.isArray(usersRes.data) ? usersRes.data : [];
             console.log('Users fetched:', usersList.length);
             
+            // Fetch all orders
+            const ordersRes = await adminAPI.getAllOrders();
+            const allOrders = Array.isArray(ordersRes.data) ? ordersRes.data : [];
+            console.log('Orders fetched:', allOrders.length);
+            
             // Calculate today's date
             const today = new Date();
             today.setHours(0, 0, 0, 0);
@@ -66,12 +78,87 @@ const AdminDashboard = () => {
                 return productDate.getTime() === today.getTime();
             }).length;
             
+            // Calculate orders placed today
+            const ordersPlacedToday = allOrders.filter(order => {
+                if (!order.createdAt) return false;
+                const orderDate = new Date(order.createdAt);
+                orderDate.setHours(0, 0, 0, 0);
+                return orderDate.getTime() === today.getTime();
+            }).length;
+            
+            // Calculate total revenue from all orders
+            const totalRevenue = allOrders.reduce((sum, order) => {
+                const price = parseFloat(order.totalPrice) || 0;
+                return sum + price;
+            }, 0);
+
+            // Calculate previous week's revenue
+            const thisWeekStart = new Date(today);
+            thisWeekStart.setDate(today.getDate() - today.getDay()); // Start of current week (Sunday)
+            thisWeekStart.setHours(0, 0, 0, 0);
+
+            const prevWeekStart = new Date(thisWeekStart);
+            prevWeekStart.setDate(thisWeekStart.getDate() - 7); // Start of previous week
+            
+            const prevWeekRevenue = allOrders.reduce((sum, order) => {
+                if (!order.createdAt) return sum;
+                const orderDate = new Date(order.createdAt);
+                orderDate.setHours(0, 0, 0, 0);
+                // Check if order is in previous week
+                if (orderDate.getTime() >= prevWeekStart.getTime() && orderDate.getTime() < thisWeekStart.getTime()) {
+                    const price = parseFloat(order.totalPrice) || 0;
+                    return sum + price;
+                }
+                return sum;
+            }, 0);
+
+            // Calculate percentage change
+            let revenueChangePercent = 0;
+            if (prevWeekRevenue > 0) {
+                revenueChangePercent = ((totalRevenue - prevWeekRevenue) / prevWeekRevenue) * 100;
+            } else if (totalRevenue > 0) {
+                revenueChangePercent = 100; // 100% increase if last week had 0 revenue
+            }
+
+            // Calculate daily revenue for the past 7 days
+            const weeklyData = [];
+            for (let i = 6; i >= 0; i--) {
+                const day = new Date(today);
+                day.setDate(today.getDate() - i);
+                day.setHours(0, 0, 0, 0);
+                
+                const nextDay = new Date(day);
+                nextDay.setDate(day.getDate() + 1);
+                
+                const dayRevenue = allOrders.reduce((sum, order) => {
+                    if (!order.createdAt) return sum;
+                    const orderDate = new Date(order.createdAt);
+                    orderDate.setHours(0, 0, 0, 0);
+                    if (orderDate.getTime() >= day.getTime() && orderDate.getTime() < nextDay.getTime()) {
+                        const price = parseFloat(order.totalPrice) || 0;
+                        return sum + price;
+                    }
+                    return sum;
+                }, 0);
+                
+                weeklyData.push({
+                    day: day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                    revenue: parseFloat(dayRevenue.toFixed(2))
+                });
+            }
+            
+            setWeeklyRevenueData(weeklyData);
+            
             setStats(prev => ({
                 ...prev,
                 totalUsers: usersList.length,
                 usersRegisteredToday: usersRegisteredToday,
                 activeAds: products.length,
-                productsAddedToday: productsAddedToday
+                productsAddedToday: productsAddedToday,
+                totalOrders: allOrders.length,
+                ordersPlacedToday: ordersPlacedToday,
+                totalRevenue: totalRevenue,
+                revenueChangePercent: parseFloat(revenueChangePercent.toFixed(2))
             }));
         } catch (err) {
             console.error('Error fetching stats:', err);
@@ -272,7 +359,7 @@ const AdminDashboard = () => {
                                 variants={containerVariants}
                                 initial="hidden"
                                 animate="visible"
-                                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-max"
                             >
                                 <StatCard
                                     icon={<FaUsers color="#dc2626" />}
@@ -287,11 +374,54 @@ const AdminDashboard = () => {
                                     trend={`${applications.filter(app => app.status === 'PENDING').length} awaiting approval`}
                                     warning={applications.filter(app => app.status === 'PENDING').length > 0}
                                 />
+                                <div className="lg:row-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div className="flex-1">
+                                            <h4 className="text-gray-500 text-sm font-medium">Total Revenue</h4>
+                                            <div className="flex items-baseline gap-2 mt-2">
+                                                <span className="text-2xl font-bold text-gray-800">{`Rs. ${parseFloat(stats.totalRevenue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</span>
+                                            </div>
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mt-2 bg-green-100 text-green-600`}>
+                                                {`${stats.revenueChangePercent >= 0 ? '+' : ''}${stats.revenueChangePercent}% vs last week`}
+                                            </span>
+                                        </div>
+                                        <div className="p-3 bg-gray-50 rounded-lg">
+                                            <FaDollarSign color="#dc2626" size={20} />
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 mt-4">
+                                        <ResponsiveContainer width="100%" height={180}>
+                                            <LineChart data={weeklyRevenueData}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                                                <XAxis dataKey="day" tick={{ fontSize: 11 }} stroke="#9ca3af" />
+                                                <YAxis tick={{ fontSize: 11 }} stroke="#9ca3af" />
+                                                <Tooltip 
+                                                    contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb' }}
+                                                    formatter={(value) => `Rs. ${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                                                />
+                                                <Line 
+                                                    type="monotone" 
+                                                    dataKey="revenue" 
+                                                    stroke="#dc2626" 
+                                                    strokeWidth={3}
+                                                    dot={{ fill: '#dc2626', r: 4 }}
+                                                    activeDot={{ r: 6 }}
+                                                />
+                                            </LineChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
                                 <StatCard
                                     icon={<FaCar color="#dc2626" />}
                                     label="Active Products"
                                     value={stats.activeAds}
                                     trend={`+${stats.productsAddedToday} New today`}
+                                />
+                                <StatCard
+                                    icon={<FaShoppingCart color="#dc2626" />}
+                                    label="Total Orders"
+                                    value={stats.totalOrders}
+                                    trend={`+${stats.ordersPlacedToday} placed today`}
                                 />
                             </motion.div>
 

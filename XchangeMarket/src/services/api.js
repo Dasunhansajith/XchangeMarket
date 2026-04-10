@@ -195,6 +195,9 @@ export const adminAPI = {
 
   rejectSellerApplication: (applicationId, data) =>
     apiWithPrefix.post(`/sellers/applications/${applicationId}/reject`, data),
+
+  getAllOrders: () =>
+    apiWithPrefix.get('/admin/orders'),
 };
 
 // ============ ORDER ENDPOINTS ============
