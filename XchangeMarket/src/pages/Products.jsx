@@ -203,7 +203,7 @@ const Products = () => {
                                         <VehicleCard
                                             id={product.id}
                                             title={product.name}
-                                            seller={product.shopId ? `Shop #${product.shopId}` : "Trusted Seller"}
+                                            seller={product.shopName || "Trusted Seller"}
                                             price={`Rs ${safePrice.toLocaleString()}`}
                                             location="Sri Lanka"
                                             images={safeImages.length > 0 ? safeImages : []}

@@ -195,6 +195,27 @@ export const adminAPI = {
 
   rejectSellerApplication: (applicationId, data) =>
     apiWithPrefix.post(`/sellers/applications/${applicationId}/reject`, data),
+
+  deleteSellerApplication: (applicationId) =>
+    apiWithPrefix.delete(`/sellers/applications/${applicationId}`),
+
+  getAllShops: () =>
+    apiWithPrefix.get('/admin/shops'),
+
+  deleteShop: (shopId) =>
+    apiWithPrefix.delete(`/admin/shops/${shopId}`),
+
+  getAllOrders: () =>
+    apiWithPrefix.get('/admin/orders'),
+
+  updateUserRole: (userId, role) =>
+    apiWithPrefix.post(`/admin/users/${userId}/role`, { role }),
+
+  removeUserRole: (userId, role) =>
+    apiWithPrefix.delete(`/admin/users/${userId}/role`, { data: { role } }),
+
+  deleteUser: (userId) =>
+    apiWithPrefix.delete(`/admin/users/${userId}`),
 };
 
 // ============ ORDER ENDPOINTS ============
