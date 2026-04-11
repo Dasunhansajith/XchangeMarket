@@ -17,7 +17,7 @@ import ApplicationSubmitted from './pages/ApplicationSubmitted';
 import { LanguageProvider } from './context/LanguageContext';
 import { AuthProvider } from './context/AuthContext';
 import { WishlistProvider } from './context/WishlistContext';
-import { ProtectedRoute, AdminRoute } from './components/ProtectedRoute';
+import { ProtectedRoute, AdminRoute, SellerRoute } from './components/ProtectedRoute';
 import ConditionalFloatingWishlistButton from './components/ConditionalFloatingWishlistButton';
 import NotificationsPage from './pages/NotificationsPage';
 
@@ -119,9 +119,9 @@ function App() {
                 <Route
                   path="/seller-dashboard"
                   element={
-                    <ProtectedRoute>
+                    <SellerRoute>
                       <SellerDashboard />
-                    </ProtectedRoute>
+                    </SellerRoute>
                   }
                 />
                 <Route
