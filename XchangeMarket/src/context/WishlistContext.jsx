@@ -31,7 +31,6 @@ export const WishlistProvider = ({ children }) => {
   }, [user, loading]);
 
   const addToWishlist = useCallback((product) => {
-    v
     setWishlistItems((prev) => {
       const key = product.id || product.title || product.name;
       const exists = prev.some(

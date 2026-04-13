@@ -22,8 +22,6 @@ const AccountProfile = () => {
     const [reviewText, setReviewText] = useState('');
     const [reviewSubmitting, setReviewSubmitting] = useState(false);
     const [trackingOrderId, setTrackingOrderId] = useState(null);
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const [isDeleting, setIsDeleting] = useState(false);
 
     const [formData, setFormData] = useState({
         name: user?.name || '',
@@ -154,25 +152,6 @@ const AccountProfile = () => {
         navigate('/');
     };
 
-    const handleDeleteAccount = async () => {
-        setIsDeleting(true);
-        try {
-            const res = await deleteAccount();
-            if (res.success) {
-                toast.success('Account deleted successfully');
-                navigate('/');
-            } else {
-                toast.error(res.error || 'Failed to delete account');
-            }
-        } catch (error) {
-            console.error('Delete account error:', error);
-            toast.error('An error occurred while deleting your account');
-        } finally {
-            setIsDeleting(false);
-            setShowDeleteConfirm(false);
-        }
-    };
-
     if (!user) return <div className="p-20 text-center">Please login to view profile.</div>;
 
     return (
@@ -189,7 +168,7 @@ const AccountProfile = () => {
                         <button
                             key={icon}
                             onClick={() => icon === 'orders' ? setSearchParams({ tab: 'orders' }) : setSearchParams({ tab: 'profile' })}
-                            className={`p-3 rounded-2xl transition-all duration-300 ${activeTab === icon ? 'text-blue-600 bg-blue-50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`}
+                            className={`p-3 rounded-2xl transition-all duration-300 ${activeTab === icon ? 'text-blue-600 bg-blue-50' : 'text-gray-300 hover:text-gray-500 hover:bg-gray-50'}`}
                         >
                             <span className="capitalize text-[10px] font-bold hidden md:block mt-1">{icon}</span>
                             {icon === 'orders' && <svg className="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>}
@@ -197,9 +176,8 @@ const AccountProfile = () => {
                         </button>
                     ))}
                     <div className="flex-1"></div>
-                    <button onClick={handleLogout} className="p-3 text-red-500 hover:text-red-700 hover:bg-red-100 rounded-2xl transition-all" title="Sign out">
-                        <svg className="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
-                        <span className="text-[10px] font-bold hidden md:block mt-1 text-red-500">Sign out</span>
+                    <button onClick={handleLogout} className="p-3 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-2xl transition-all">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4-4H3" /></svg>
                     </button>
                 </aside>
 
@@ -354,25 +332,6 @@ const AccountProfile = () => {
                                         </div>
                                     </form>
                                 </div>
-
-                                {/* Danger Zone - Delete Account Section */}
-                                <div className="bg-red-50 rounded-[1.5rem] border border-red-200 p-6 shadow-sm">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <h3 className="text-lg font-bold text-red-800 flex items-center gap-2">
-
-                                                ⚠️ Danger Zone
-                                            </h3>
-                                            <p className="text-sm text-red-700 mt-1">Permanently delete your account and all associated data</p>
-                                        </div>
-                                        <button
-                                            onClick={() => setShowDeleteConfirm(true)}
-                                            className="px-6 py-2 rounded-xl font-bold text-xs transition-all shadow-sm active:scale-95 bg-red-500 text-white hover:bg-red-600"
-                                        >
-                                            Delete Account
-                                        </button>
-                                    </div>
-                                </div>
                             </div>
                         ) : (
                             /* Orders view with the same clean layout */
@@ -496,7 +455,7 @@ const AccountProfile = () => {
                                     </div>
                                 ) : (
                                     <div className="p-20 text-center bg-white rounded-[2rem] border border-dashed border-gray-200 text-slate-400 font-bold">
-                                        No orders have been placed yet.
+                                        No transaction history found yet.
                                     </div>
                                 )}
                             </div>
@@ -596,69 +555,6 @@ const AccountProfile = () => {
                                     {reviewSubmitting ? 'Saving…' : 'Save Changes'}
                                 </button>
                             </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Delete Account Confirmation Modal */}
-            {showDeleteConfirm && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-white rounded-[2rem] w-full max-w-md p-8 shadow-2xl animate-in zoom-in-95 duration-300">
-                        <div className="flex justify-between items-start mb-6">
-                            <div>
-                                <h3 className="text-xl font-bold text-red-800">Delete Account?</h3>
-                                <p className="text-sm text-slate-400 mt-1">This action cannot be undone</p>
-                            </div>
-                            <button 
-                                onClick={() => setShowDeleteConfirm(false)} 
-                                className="p-2 text-slate-400 hover:bg-slate-50 rounded-xl transition-all"
-                            >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
-
-                        <div className="space-y-4 mb-6">
-                            <div className="p-4 bg-red-50 rounded-xl border border-red-200">
-                                <p className="text-sm text-red-800 font-semibold mb-2">This will:</p>
-                                <ul className="text-xs text-red-700 space-y-1">
-                                    <li className="flex items-start gap-2">
-                                        <span className="text-red-500 font-bold">•</span>
-                                        Permanently delete your account
-                                    </li>
-                                    <li className="flex items-start gap-2">
-                                        <span className="text-red-500 font-bold">•</span>
-                                        Remove your seller account and shop if applicable
-                                    </li>
-                                    <li className="flex items-start gap-2">
-                                        <span className="text-red-500 font-bold">•</span>
-                                        Delete all your listed products
-                                    </li>
-                                    <li className="flex items-start gap-2">
-                                        <span className="text-red-500 font-bold">•</span>
-                                        Remove any pending seller applications
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setShowDeleteConfirm(false)}
-                                disabled={isDeleting}
-                                className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-all active:scale-95 disabled:opacity-60"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleDeleteAccount}
-                                disabled={isDeleting}
-                                className="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-all active:scale-95 disabled:opacity-60"
-                            >
-                                {isDeleting ? 'Deleting…' : 'Delete Account'}
-                            </button>
                         </div>
                     </div>
                 </div>
