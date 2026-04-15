@@ -202,7 +202,6 @@ export const LanguageProvider = ({ children }) => {
             districtLabel: "දිස්ත්‍රික්කය",
             selectDistrict: "දිස්ත්‍රික්කය තෝරන්න",
             cityLabel: "නගරය",
-            cityLabel: "නගරය",
             selectCity: "නගරය තෝරන්න",
             paymentMethodsLabel: "පිළිගන්නා මුදල් ගෙවීමේ ක්‍රම",
             cod: "භාණ්ඩ ලැබුණු පසු මුදල් ගෙවීම",

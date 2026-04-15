@@ -118,6 +118,14 @@ export const sellerAPI = {
 
   registerShop: (shopData) =>
     apiWithPrefix.post('/sellers/register-shop', shopData),
+
+  getUserApplication: () =>
+    apiWithPrefix.get('/sellers/application/user'),
+
+  getSalesReport: (startDate, endDate) =>
+    apiWithPrefix.get('/sellers/sales-report', {
+      params: { startDate, endDate }
+    }),
 };
 
 // ============ FRAUD ENDPOINTS ============
@@ -137,8 +145,10 @@ export const contactAPI = {
 
 // ============ PRODUCT ENDPOINTS ============
 export const productAPI = {
-  getAllProducts: () =>
-    apiWithPrefix.get('/products'),
+  getAllProducts: (page = 0, size = 20, sort = 'createdAt,desc') =>
+    apiWithPrefix.get('/products', {
+      params: { page, size, sort },
+    }),
 
   getProductById: (id) =>
     apiWithPrefix.get(`/products/${id}`),

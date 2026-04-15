@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { productAPI, orderAPI, sellerAPI, notificationAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
-import { FaBox, FaPlus, FaChartLine, FaEdit, FaTrash, FaUpload, FaStore, FaMoneyBillWave, FaSpinner, FaExclamationTriangle, FaCheck, FaTimes, FaClipboardList, FaBell } from 'react-icons/fa';
+import { FaBox, FaPlus, FaChartLine, FaEdit, FaTrash, FaUpload, FaStore, FaMoneyBillWave, FaSpinner, FaExclamationTriangle, FaCheck, FaTimes, FaClipboardList, FaBell, FaDownload } from 'react-icons/fa';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const SellerDashboard = () => {
     const { user } = useAuth();
@@ -27,6 +29,13 @@ const SellerDashboard = () => {
     const [isSubmittingTracking, setIsSubmittingTracking] = useState(false);
     const [trackingStatuses, setTrackingStatuses] = useState({});
 
+    // Sales Report State
+    const [startDate, setStartDate] = useState(new Date(new Date().setDate(new Date().getDate() - 30)));
+    const [endDate, setEndDate] = useState(new Date());
+    const [salesReport, setSalesReport] = useState(null);
+    const [reportLoading, setReportLoading] = useState(false);
+    const [reportHistory, setReportHistory] = useState([]);
+
     const [formData, setFormData] = useState({
         name: '',
         price: '',
@@ -37,6 +46,329 @@ const SellerDashboard = () => {
     });
 
     const [imagePreviews, setImagePreviews] = useState([]);
+
+    // Ref for PDF report content
+    const reportContentRef = useRef(null);
+
+    const generatePDFContent = async (isDownload = true) => {
+        if (!salesReport) {
+            toast.error('No report data');
+            return null;
+        }
+
+        try {
+            // Create a simplified clone for PDF with compatible styles
+            const cloneContainer = document.createElement('div');
+            cloneContainer.style.width = '1200px';
+            cloneContainer.style.backgroundColor = '#ffffff';
+            cloneContainer.style.padding = '40px';
+            cloneContainer.style.fontFamily = '"Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+            
+            // Add Google Fonts style
+            const styleTag = document.createElement('style');
+            styleTag.textContent = `
+                @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+                * { font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+            `;
+            cloneContainer.appendChild(styleTag);
+            
+            // Header
+            const header = document.createElement('div');
+            header.style.borderBottom = '3px solid #333';
+            header.style.paddingBottom = '20px';
+            header.style.marginBottom = '20px';
+            
+            const headerContent = document.createElement('div');
+            headerContent.style.display = 'grid';
+            headerContent.style.gridTemplateColumns = '1fr 1fr';
+            headerContent.style.gap = '20px';
+            headerContent.innerHTML = `
+                <div>
+                    <h1 style="margin: 0; font-size: 32px; color: #dc2626; font-weight: bold;">XCHANGE</h1>
+                    <p style="margin: 5px 0 0 0; color: #666; font-size: 12px;">Sri Lanka's Premier Multi-Vendor Marketplace</p>
+                </div>
+                <div style="text-align: right;">
+                    <p style="margin: 0; font-size: 10px; color: #999; font-weight: bold;">SALES REPORT</p>
+                    <p style="margin: 10px 0 0 0; font-size: 14px; font-weight: bold; color: #333;">${new Date().toLocaleDateString()}</p>
+                </div>
+            `;
+            header.appendChild(headerContent);
+            cloneContainer.appendChild(header);
+            
+            // Report Details
+            const details = document.createElement('div');
+            details.style.display = 'grid';
+            details.style.gridTemplateColumns = 'repeat(4, 1fr)';
+            details.style.gap = '20px';
+            details.style.marginBottom = '30px';
+            details.style.fontSize = '12px';
+            
+            const detailFields = [
+                { label: 'SELLER EMAIL', value: user?.email || 'N/A' },
+                { label: 'REPORT PERIOD', value: `${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}` },
+                { label: 'DAYS INCLUDED', value: `${Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24))} days` },
+                { label: 'GENERATED', value: new Date().toLocaleTimeString() }
+            ];
+            
+            detailFields.forEach(field => {
+                const div = document.createElement('div');
+                div.innerHTML = `
+                    <p style="margin: 0; color: #999; font-weight: bold; font-size: 10px;">${field.label}</p>
+                    <p style="margin: 5px 0 0 0; color: #333; word-break: break-all; font-family: monospace; font-size: 11px;">${field.value}</p>
+                `;
+                details.appendChild(div);
+            });
+            cloneContainer.appendChild(details);
+            
+            // Summary Section
+            const summaryTitle = document.createElement('h3');
+            summaryTitle.textContent = 'Performance Summary';
+            summaryTitle.style.fontSize = '16px';
+            summaryTitle.style.fontWeight = 'bold';
+            summaryTitle.style.marginBottom = '15px';
+            summaryTitle.style.color = '#333';
+            cloneContainer.appendChild(summaryTitle);
+            
+            const summaryGrid = document.createElement('div');
+            summaryGrid.style.display = 'grid';
+            summaryGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+            summaryGrid.style.gap = '15px';
+            summaryGrid.style.marginBottom = '30px';
+            
+            const summaryCards = [
+                { label: 'Total Orders', value: salesReport.totalOrders, bgColor: '#dbeafe', textColor: '#0369a1', labelColor: '#0284c7' },
+                { label: 'Total Revenue', value: `Rs ${salesReport.totalRevenue?.toLocaleString()}`, bgColor: '#dcfce7', textColor: '#15803d', labelColor: '#16a34a' },
+                { label: 'Avg Order Value', value: `Rs ${(salesReport.totalRevenue / (salesReport.totalOrders || 1)).toLocaleString('en-US', {maximumFractionDigits: 0})}`, bgColor: '#f3e8ff', textColor: '#6b21a8', labelColor: '#9333ea' }
+            ];
+            
+            summaryCards.forEach(card => {
+                const div = document.createElement('div');
+                div.style.backgroundColor = card.bgColor;
+                div.style.padding = '15px';
+                div.style.borderRadius = '8px';
+                div.innerHTML = `
+                    <p style="margin: 0; font-size: 11px; color: ${card.labelColor}; font-weight: bold;">${card.label}</p>
+                    <p style="margin: 10px 0 0 0; font-size: 24px; font-weight: bold; color: ${card.textColor};">${card.value}</p>
+                `;
+                summaryGrid.appendChild(div);
+            });
+            cloneContainer.appendChild(summaryGrid);
+            
+            // Order Details Section
+            const orderTitle = document.createElement('h3');
+            orderTitle.textContent = 'Order Details';
+            orderTitle.style.fontSize = '16px';
+            orderTitle.style.fontWeight = 'bold';
+            orderTitle.style.marginBottom = '15px';
+            orderTitle.style.color = '#333';
+            cloneContainer.appendChild(orderTitle);
+            
+            // Table
+            const table = document.createElement('table');
+            table.style.width = '100%';
+            table.style.borderCollapse = 'collapse';
+            table.style.fontSize = '11px';
+            table.style.marginBottom = '30px';
+            
+            const thead = document.createElement('thead');
+            thead.style.backgroundColor = '#f3f4f6';
+            const headerRow = document.createElement('tr');
+            ['Order ID', 'Product', 'Qty', 'Unit Price', 'Total', 'Buyer', 'Status', 'Date'].forEach(header => {
+                const th = document.createElement('th');
+                th.textContent = header;
+                th.style.padding = '10px';
+                th.style.textAlign = 'left';
+                th.style.borderBottom = '2px solid #d1d5db';
+                th.style.fontWeight = 'bold';
+                th.style.color = '#374151';
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+            
+            const tbody = document.createElement('tbody');
+            if (salesReport.orders && salesReport.orders.length > 0) {
+                salesReport.orders.forEach((order, idx) => {
+                    const row = document.createElement('tr');
+                    row.style.borderBottom = '1px solid #e5e7eb';
+                    if (idx % 2 === 0) row.style.backgroundColor = '#fafafa';
+                    
+                    const cells = [
+                        order.orderId.slice(-6),
+                        order.productName,
+                        order.quantity,
+                        `Rs ${order.price?.toLocaleString()}`,
+                        `Rs ${order.totalPrice?.toLocaleString()}`,
+                        order.buyerName,
+                        order.status === 'COMPLETED' ? '✓ COMPLETED' : 'ACCEPTED',
+                        new Date(order.dateCreated).toLocaleDateString()
+                    ];
+                    
+                    cells.forEach((cell, i) => {
+                        const td = document.createElement('td');
+                        td.textContent = cell;
+                        td.style.padding = '8px 10px';
+                        td.style.color = '#374151';
+                        row.appendChild(td);
+                    });
+                    tbody.appendChild(row);
+                });
+            } else {
+                const row = document.createElement('tr');
+                const td = document.createElement('td');
+                td.colSpan = 8;
+                td.textContent = 'No sales in this date range';
+                td.style.padding = '20px';
+                td.style.textAlign = 'center';
+                td.style.color = '#999';
+                row.appendChild(td);
+                tbody.appendChild(row);
+            }
+            table.appendChild(tbody);
+            cloneContainer.appendChild(table);
+            
+            // Footer
+            const footer = document.createElement('div');
+            footer.style.borderTop = '2px solid #d1d5db';
+            footer.style.paddingTop = '20px';
+            footer.style.marginTop = '20px';
+            
+            const footerGrid = document.createElement('div');
+            footerGrid.style.display = 'grid';
+            footerGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+            footerGrid.style.gap = '20px';
+            footerGrid.style.fontSize = '10px';
+            footerGrid.style.marginBottom = '15px';
+            footerGrid.innerHTML = `
+                <div>
+                    <p style="margin: 0; font-weight: bold; color: #333;">XCHANGE</p>
+                    <p style="margin: 3px 0 0 0; color: #666;">Sri Lanka's Premier Multi-Vendor Marketplace</p>
+                </div>
+                <div style="text-align: center;">
+                    <p style="margin: 0; font-weight: bold; color: #333;">Support</p>
+                    <p style="margin: 3px 0 0 0; color: #666;">xchangesrilanka@gmail.com</p>
+                </div>
+                <div style="text-align: right;">
+                    <p style="margin: 0; font-weight: bold; color: #333;">Confidential</p>
+                    <p style="margin: 3px 0 0 0; color: #666;">For authorized use only</p>
+                </div>
+            `;
+            footer.appendChild(footerGrid);
+            
+            const copyright = document.createElement('p');
+            copyright.textContent = '© 2026 XCHANGE Marketplace. All Rights Reserved.';
+            copyright.style.margin = '10px 0 0 0';
+            copyright.style.textAlign = 'center';
+            copyright.style.fontSize = '9px';
+            copyright.style.color = '#999';
+            footer.appendChild(copyright);
+            cloneContainer.appendChild(footer);
+            
+            // Append to body temporarily
+            cloneContainer.style.position = 'fixed';
+            cloneContainer.style.left = '-9999px';
+            document.body.appendChild(cloneContainer);
+            
+            // Convert to canvas
+            const canvas = await html2canvas(cloneContainer, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                logging: false
+            });
+            
+            // Remove temporary element
+            document.body.removeChild(cloneContainer);
+            
+            // Create PDF
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF({
+                orientation: 'landscape',
+                unit: 'mm',
+                format: 'a4'
+            });
+
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            const imgWidth = pageWidth - 20;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+            let heightLeft = imgHeight;
+            let position = 10;
+
+            pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight - 20;
+
+            while (heightLeft >= 0) {
+                position = heightLeft - imgHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight - 20;
+            }
+
+            const fileName = `Sales_Report_${startDate.toISOString().split('T')[0]}_to_${endDate.toISOString().split('T')[0]}.pdf`;
+            
+            if (isDownload) {
+                pdf.save(fileName);
+                toast.dismiss();
+                toast.success('PDF downloaded successfully!');
+                
+                // Add to history
+                const reportEntry = {
+                    id: Date.now(),
+                    fileName,
+                    startDate: startDate.toISOString().split('T')[0],
+                    endDate: endDate.toISOString().split('T')[0],
+                    totalOrders: salesReport.totalOrders,
+                    totalRevenue: salesReport.totalRevenue,
+                    generatedAt: new Date()
+                };
+                setReportHistory([reportEntry, ...reportHistory]);
+            } else {
+                // Return PDF as blob URL for viewing
+                const pdfBlob = pdf.output('blob');
+                return URL.createObjectURL(pdfBlob);
+            }
+        } catch (err) {
+            console.error('Error generating PDF:', err);
+            if (isDownload) {
+                toast.dismiss();
+                toast.error('Failed to generate PDF');
+            }
+            return null;
+        }
+    };
+
+    const downloadReportAsPDF = async () => {
+        toast.loading('Generating PDF...');
+        await generatePDFContent(true);
+    };
+
+    const viewReportAsPDF = async () => {
+        toast.loading('Generating PDF...');
+        const pdfUrl = await generatePDFContent(false);
+        toast.dismiss();
+        if (pdfUrl) {
+            window.open(pdfUrl, '_blank');
+        }
+    };
+
+    const openHistoricalReport = async (reportEntry) => {
+        // For now, we'll regenerate from history data
+        // In a production app, you'd store the PDF blob
+        toast.loading('Preparing report...');
+        
+        // Temporarily set dates and generate
+        const prevStartDate = startDate;
+        const prevEndDate = endDate;
+        
+        setStartDate(new Date(reportEntry.startDate));
+        setEndDate(new Date(reportEntry.endDate));
+        
+        // This is a simple approach - in production you'd fetch the original report data
+        toast.dismiss();
+        toast.info('Historical reports cannot be regenerated. Use Download on active reports to save them.');
+    };
 
     const handleImageChange = (e) => {
         const files = Array.from(e.target.files);
@@ -113,6 +445,19 @@ const SellerDashboard = () => {
             toast.error('Failed to load orders');
         } finally {
             setOrdersLoading(false);
+        }
+    }, []);
+
+    const fetchSalesReport = useCallback(async (start, end) => {
+        try {
+            setReportLoading(true);
+            const response = await sellerAPI.getSalesReport(start.getTime(), end.getTime());
+            setSalesReport(response.data);
+        } catch (err) {
+            console.error('Error fetching sales report:', err);
+            toast.error('Failed to load sales report');
+        } finally {
+            setReportLoading(false);
         }
     }, []);
 
@@ -671,7 +1016,7 @@ const SellerDashboard = () => {
                 {!ordersLoading && !error && orders.length === 0 && (
                     <div className="py-20 text-center text-gray-500">
                         <FaClipboardList className="text-5xl mx-auto mb-4 opacity-10" />
-                        <p>No orders yet. Keep up the good work!</p>
+                        <p>No orders yet.</p>
                     </div>
                 )}
             </div>
@@ -867,6 +1212,228 @@ const SellerDashboard = () => {
         </div>
     );
 
+    const renderSalesReport = () => (
+        <div className="space-y-6">
+            <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold text-gray-800">Sales Report</h2>
+                {salesReport && (
+                    <div className="flex gap-3">
+                        <button
+                            onClick={viewReportAsPDF}
+                            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2 font-semibold"
+                        >
+                            <FaChartLine /> View PDF
+                        </button>
+                        <button
+                            onClick={downloadReportAsPDF}
+                            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-2 font-semibold"
+                        >
+                            <FaDownload /> Download PDF
+                        </button>
+                    </div>
+                )}
+            </div>
+            
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <div className="flex flex-col md:flex-row gap-4 items-end mb-6">
+                    <div className="flex-1">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Start Date</label>
+                        <input
+                            type="date"
+                            value={startDate.toISOString().split('T')[0]}
+                            onChange={(e) => setStartDate(new Date(e.target.value))}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-red-600"
+                        />
+                    </div>
+                    <div className="flex-1">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">End Date</label>
+                        <input
+                            type="date"
+                            value={endDate.toISOString().split('T')[0]}
+                            onChange={(e) => setEndDate(new Date(e.target.value))}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-red-600"
+                        />
+                    </div>
+                    <button
+                        onClick={() => fetchSalesReport(startDate, endDate)}
+                        disabled={reportLoading}
+                        className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition flex items-center gap-2 disabled:opacity-50"
+                    >
+                        {reportLoading ? <FaSpinner className="animate-spin" /> : <FaChartLine />}
+                        Generate Report
+                    </button>
+                </div>
+            </div>
+
+            {salesReport && (
+                <div ref={reportContentRef} className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 space-y-6">
+                    {/* Header/Branding Section */}
+                    <div className="border-b-2 border-gray-200 pb-6 mb-6">
+                        <div className="grid grid-cols-2 gap-4 mb-6">
+                            <div>
+                                <h1 className="text-4xl font-black text-red-600">XCHANGE</h1>
+                                <p className="text-gray-600 text-sm mt-1">Sri Lanka's Premier Multi-Vendor Marketplace</p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-xs text-gray-500 font-semibold">SALES REPORT</p>
+                                <p className="text-lg font-bold text-gray-800 mt-2">{new Date().toLocaleDateString()}</p>
+                            </div>
+                        </div>
+
+                        {/* Report Details */}
+                        <div className="grid grid-cols-4 gap-4 text-sm mb-4">
+                            <div>
+                                <p className="text-gray-500 font-semibold">SELLER EMAIL</p>
+                                <p className="text-gray-800 font-mono text-xs break-all">{user?.email}</p>
+                            </div>
+                            <div>
+                                <p className="text-gray-500 font-semibold">REPORT PERIOD</p>
+                                <p className="text-gray-800">{startDate.toLocaleDateString()} to {endDate.toLocaleDateString()}</p>
+                            </div>
+                            <div>
+                                <p className="text-gray-500 font-semibold">DAYS INCLUDED</p>
+                                <p className="text-gray-800">{Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24))} days</p>
+                            </div>
+                            <div>
+                                <p className="text-gray-500 font-semibold">GENERATED</p>
+                                <p className="text-gray-800">{new Date().toLocaleTimeString()}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Summary Statistics */}
+                    <div>
+                        <h3 className="text-lg font-bold text-gray-800 mb-4">Performance Summary</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
+                                <p className="text-sm text-blue-600 font-semibold">Total Orders</p>
+                                <p className="text-3xl font-bold text-blue-800 mt-2">{salesReport.totalOrders}</p>
+                            </div>
+                            <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border border-green-200">
+                                <p className="text-sm text-green-600 font-semibold">Total Revenue</p>
+                                <p className="text-3xl font-bold text-green-800 mt-2">Rs {salesReport.totalRevenue?.toLocaleString()}</p>
+                            </div>
+                            <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200">
+                                <p className="text-sm text-purple-600 font-semibold">Avg Order Value</p>
+                                <p className="text-3xl font-bold text-purple-800 mt-2">Rs {(salesReport.totalRevenue / (salesReport.totalOrders || 1)).toLocaleString('en-US', {maximumFractionDigits: 0})}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Order Details Section */}
+                    <div>
+                        <h3 className="text-lg font-bold text-gray-800 mb-4">Order Details</h3>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead>
+                                    <tr className="border-b-2 border-gray-300 bg-gray-100">
+                                        <th className="px-3 py-2 font-bold text-gray-700">Order ID</th>
+                                        <th className="px-3 py-2 font-bold text-gray-700">Product</th>
+                                        <th className="px-3 py-2 font-bold text-gray-700">Qty</th>
+                                        <th className="px-3 py-2 font-bold text-gray-700">Unit Price</th>
+                                        <th className="px-3 py-2 font-bold text-gray-700">Total</th>
+                                        <th className="px-3 py-2 font-bold text-gray-700">Buyer</th>
+                                        <th className="px-3 py-2 font-bold text-gray-700">Status</th>
+                                        <th className="px-3 py-2 font-bold text-gray-700">Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {salesReport.orders && salesReport.orders.length > 0 ? (
+                                        salesReport.orders.map((order, idx) => (
+                                            <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50">
+                                                <td className="px-3 py-2 text-gray-600 font-mono text-xs">{order.orderId.slice(-6)}</td>
+                                                <td className="px-3 py-2 text-gray-800">{order.productName}</td>
+                                                <td className="px-3 py-2 text-gray-600">{order.quantity}</td>
+                                                <td className="px-3 py-2 text-gray-600">Rs {order.price?.toLocaleString()}</td>
+                                                <td className="px-3 py-2 font-semibold text-gray-800">Rs {order.totalPrice?.toLocaleString()}</td>
+                                                <td className="px-3 py-2 text-gray-600 text-xs">{order.buyerName}</td>
+                                                <td className="px-3 py-2">
+                                                    <span className={`px-2 py-1 rounded text-xs font-bold ${
+                                                        order.status === 'COMPLETED' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                                                    }`}>
+                                                        {order.status}
+                                                    </span>
+                                                </td>
+                                                <td className="px-3 py-2 text-gray-600 text-xs">{new Date(order.dateCreated).toLocaleDateString()}</td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan="8" className="px-3 py-6 text-center text-gray-500">No sales in this date range</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="border-t-2 border-gray-200 pt-6 mt-6">
+                        <div className="grid grid-cols-3 gap-4 text-xs text-gray-600">
+                            <div>
+                                <p className="font-bold text-gray-800">XCHANGE</p>
+                                <p>Sri Lanka's Premier Multi-Vendor Marketplace</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="font-bold text-gray-800">Support</p>
+                                <p>xchangesrilanka@gmail.com</p>
+                            </div>
+                            <div className="text-right">
+                                <p className="font-bold text-gray-800">Confidential</p>
+                                <p>This report is for authorized use only</p>
+                            </div>
+                        </div>
+                        <p className="text-xs text-gray-400 text-center mt-4">© 2026 XCHANGE Marketplace. All Rights Reserved.</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Report History Section */}
+            {reportHistory.length > 0 && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                    <h3 className="text-lg font-bold text-gray-800 mb-4">Previously Generated Reports</h3>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                            <thead>
+                                <tr className="border-b-2 border-gray-200 bg-gray-50">
+                                    <th className="px-4 py-3 font-semibold text-gray-700">Report Name</th>
+                                    <th className="px-4 py-3 font-semibold text-gray-700">Date Range</th>
+                                    <th className="px-4 py-3 font-semibold text-gray-700">Orders</th>
+                                    <th className="px-4 py-3 font-semibold text-gray-700">Revenue</th>
+                                    <th className="px-4 py-3 font-semibold text-gray-700">Generated</th>
+                                    <th className="px-4 py-3 font-semibold text-gray-700">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {reportHistory.map((report, idx) => (
+                                    <tr key={report.id} className="border-b border-gray-100 hover:bg-gray-50">
+                                        <td className="px-4 py-3 text-gray-800 font-medium">{report.fileName.replace('.pdf', '')}</td>
+                                        <td className="px-4 py-3 text-gray-600">{report.startDate} to {report.endDate}</td>
+                                        <td className="px-4 py-3 text-gray-600">{report.totalOrders}</td>
+                                        <td className="px-4 py-3 text-gray-800 font-semibold">Rs {report.totalRevenue?.toLocaleString()}</td>
+                                        <td className="px-4 py-3 text-gray-600 text-xs">{report.generatedAt.toLocaleString()}</td>
+                                        <td className="px-4 py-3">
+                                            <button
+                                                onClick={() => {
+                                                    const link = document.createElement('a');
+                                                    link.href = '#'; // In production, would be the stored PDF URL
+                                                    toast.info('Download from history is available in your downloads folder if previously downloaded');
+                                                }}
+                                                className="text-blue-600 hover:text-blue-800 font-semibold text-xs px-2 py-1 rounded hover:bg-blue-50 transition"
+                                            >
+                                                View
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+
     const renderTrackingModal = () => {
         if (!selectedOrderForTracking) return null;
         
@@ -1034,6 +1601,13 @@ const SellerDashboard = () => {
                             >
                                 <FaPlus /> Add Product
                             </button>
+
+                            <button
+                                onClick={() => setActiveTab('report')}
+                                className={`w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 transition-colors ${activeTab === 'report' ? 'bg-red-50 text-red-600 font-semibold' : 'text-gray-600 hover:bg-gray-50'}`}
+                            >
+                                <FaChartLine /> Sales Report
+                            </button>
                         </div>
                     </div>
 
@@ -1049,6 +1623,7 @@ const SellerDashboard = () => {
                             {activeTab === 'manage' && renderManageProducts()}
                             {activeTab === 'orders' && renderOrders()}
                             {activeTab === 'add' && renderAddProduct()}
+                            {activeTab === 'report' && renderSalesReport()}
                         </motion.div>
                     </div>
 
