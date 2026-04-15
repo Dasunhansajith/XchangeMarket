@@ -29,6 +29,7 @@ const AdminDashboard = () => {
     const [users, setUsers] = useState([]);
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [statsLoading, setStatsLoading] = useState(true);
     const [appLoading, setAppLoading] = useState({});
     const [deleteLoading, setDeleteLoading] = useState({});
     const [userDeleteLoading, setUserDeleteLoading] = useState({});
@@ -36,6 +37,7 @@ const AdminDashboard = () => {
     const [weeklyRevenueData, setWeeklyRevenueData] = useState([]);
     const [stores, setStores] = useState([]);
     const [storeDeleteLoading, setStoreDeleteLoading] = useState({});
+    const [statsError, setStatsError] = useState(null);
 
     useEffect(() => {
         if (activeTab === 'dashboard') {
@@ -52,6 +54,8 @@ const AdminDashboard = () => {
 
     const fetchStats = async () => {
         try {
+            setStatsLoading(true);
+            setStatsError(null);
             const productsRes = await productAPI.getAllProducts();
             const products = Array.isArray(productsRes.data) ? productsRes.data : [];
             console.log('Products fetched:', products.length);
@@ -169,6 +173,10 @@ const AdminDashboard = () => {
         } catch (err) {
             console.error('Error fetching stats:', err);
             console.error('Error response:', err.response?.data || err.message);
+            setStatsError('Failed to load dashboard statistics. Please try again later.');
+            toast.error('Failed to load dashboard statistics');
+        } finally {
+            setStatsLoading(false);
         }
     };
 
@@ -475,6 +483,37 @@ const AdminDashboard = () => {
                                 <h2 className="text-2xl font-bold text-gray-800">Dashboard Overview</h2>
                                 <span className="text-sm text-gray-500">Last updated: {new Date().toLocaleDateString()}</span>
                             </div>
+
+                            {/* Error Message */}
+                            {statsError && (
+                                <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+                                    <div className="text-red-600 pt-0.5">
+                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                        </svg>
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-red-700 font-medium">{statsError}</p>
+                                        <p className="text-red-600 text-sm mt-1">Please ensure the backend server is running and all API endpoints are accessible.</p>
+                                    </div>
+                                    <button 
+                                        onClick={fetchStats}
+                                        className="text-red-600 hover:text-red-700 font-medium text-sm"
+                                    >
+                                        Retry
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Loading State */}
+                            {statsLoading && (
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
+                                    <div className="text-blue-600 pt-0.5">
+                                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                                    </div>
+                                    <p className="text-blue-700 font-medium">Loading dashboard statistics...</p>
+                                </div>
+                            )}
 
                             {/* Stats Cards */}
                             <motion.div

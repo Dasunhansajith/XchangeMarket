@@ -1,38 +1,110 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { productAPI } from '../services/api';
 import VehicleCard from '../components/VehicleCard';
-import { FaSpinner, FaBoxOpen, FaSearch, FaFilter } from 'react-icons/fa';
+import { FaSpinner, FaBoxOpen, FaSearch, FaFilter, FaChevronDown } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { categories } from '../components/CategoryGrid';
 
 const CATEGORIES = ['All', 'Mobiles', 'Vehicles', 'Electronics', 'Property', 'Fashion'];
 
+// Memoized card component to prevent unnecessary re-renders
+const ProductCardMemo = memo(({ product, index }) => {
+    let safePrice = 0;
+    if (product.price) {
+        safePrice = typeof product.price === 'number'
+            ? product.price
+            : parseFloat(product.price.toString().replace(/[^0-9.]/g, '')) || 0;
+    }
+
+    let safeImages = [];
+    if (product.images) {
+        if (Array.isArray(product.images)) {
+            safeImages = product.images;
+        } else if (typeof product.images === 'string') {
+            try {
+                const parsed = JSON.parse(product.images);
+                safeImages = Array.isArray(parsed) ? parsed : [product.images];
+            } catch (e) {
+                safeImages = product.images.trim().startsWith('[') || product.images.trim().startsWith('{') ? [] : [product.images];
+            }
+        }
+    }
+
+    return (
+        <motion.div
+            key={product.id || index}
+            layout
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.3 }}
+        >
+            <VehicleCard
+                id={product.id}
+                title={product.name}
+                seller={product.shopName || "Trusted Seller"}
+                price={`Rs ${safePrice.toLocaleString()}`}
+                location="Sri Lanka"
+                images={safeImages.length > 0 ? safeImages : []}
+                badgeText={product.category || "New Arrival"}
+                description={product.description ? product.description.toString().split('\n') : ["No description available."]}
+                offerPercentage={product.stockQuantity > 0 ? 'Available' : 'Unavailable'}
+                stockQuantity={product.stockQuantity}
+                averageRating={product.averageRating || 0}
+                contactNumber={product.contactNumber || product.sellerPhone || "94766414622"}
+            />
+        </motion.div>
+    );
+});
+
+ProductCardMemo.displayName = 'ProductCard';
+
 const Products = () => {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [hasMore, setHasMore] = useState(true);
+    const [currentPage, setCurrentPage] = useState(0);
+    const PAGE_SIZE = 20;
 
     // Filtering states
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('All');
 
+    // Fetch initial products on mount
     useEffect(() => {
-        const fetchAllProducts = async () => {
+        const fetchProducts = async () => {
             try {
                 setLoading(true);
-                const response = await productAPI.getAllProducts();
-                // Handle potential pagination format (content array) or direct array
+                const response = await productAPI.getAllProducts(0, PAGE_SIZE);
                 const productsData = response.data.content || response.data;
                 const dataArray = Array.isArray(productsData) ? productsData : [];
                 setProducts(dataArray);
+                setCurrentPage(1);
+                setHasMore(dataArray.length === PAGE_SIZE);
             } catch (error) {
-                console.error('Error fetching all products:', error);
+                console.error('Error fetching products:', error);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchAllProducts();
+        fetchProducts();
     }, []);
+
+    // Load more products (for load more button)
+    const loadMore = useCallback(async () => {
+        if (loading || !hasMore) return;
+        try {
+            const response = await productAPI.getAllProducts(currentPage, PAGE_SIZE);
+            const productsData = response.data.content || response.data;
+            const dataArray = Array.isArray(productsData) ? productsData : [];
+            setProducts(prev => [...prev, ...dataArray]);
+            setCurrentPage(prev => prev + 1);
+            setHasMore(dataArray.length === PAGE_SIZE);
+        } catch (error) {
+            console.error('Error loading more products:', error);
+        }
+    }, [currentPage, loading, hasMore]);
 
     // Filter logic
     const filteredProducts = useMemo(() => {
@@ -161,64 +233,37 @@ const Products = () => {
                         </button>
                     </motion.div>
                 ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                        <AnimatePresence>
-                            {filteredProducts.map((product, index) => {
-                                // Safe price handling
-                                let safePrice = 0;
-                                if (product.price) {
-                                    safePrice = typeof product.price === 'number'
-                                        ? product.price
-                                        : parseFloat(product.price.toString().replace(/[^0-9.]/g, '')) || 0;
-                                }
-
-                                // Safe images handling
-                                let safeImages = [];
-                                if (product.images) {
-                                    if (Array.isArray(product.images)) {
-                                        safeImages = product.images;
-                                    } else if (typeof product.images === 'string') {
-                                        try {
-                                            const parsed = JSON.parse(product.images);
-                                            safeImages = Array.isArray(parsed) ? parsed : [product.images];
-                                        } catch (e) {
-                                            if (product.images.trim().startsWith('[') || product.images.trim().startsWith('{')) {
-                                                safeImages = [];
-                                            } else {
-                                                safeImages = [product.images];
-                                            }
-                                        }
-                                    }
-                                }
-
-                                return (
-                                    <motion.div
-                                        key={product.id || index}
-                                        layout
-                                        initial={{ opacity: 0, scale: 0.9 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.9 }}
-                                        transition={{ duration: 0.3 }}
-                                    >
-                                        <VehicleCard
-                                            id={product.id}
-                                            title={product.name}
-                                            seller={product.shopName || "Trusted Seller"}
-                                            price={`Rs ${safePrice.toLocaleString()}`}
-                                            location="Sri Lanka"
-                                            images={safeImages.length > 0 ? safeImages : []}
-                                            badgeText={product.category || "New Arrival"}
-                                            description={product.description ? product.description.toString().split('\n') : ["No description available."]}
-                                            offerPercentage={product.stockQuantity > 0 ? 'Available' : 'Unavailable'}
-                                            stockQuantity={product.stockQuantity}
-                                            averageRating={product.averageRating || 0}
-                                            contactNumber={product.contactNumber || product.sellerPhone || "94766414622"}
-                                        />
-                                    </motion.div>
-                                );
-                            })}
-                        </AnimatePresence>
-                    </div>
+                    <>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                            <AnimatePresence>
+                                {filteredProducts.map((product, index) => (
+                                    <ProductCardMemo key={product.id || index} product={product} index={index} />
+                                ))}
+                            </AnimatePresence>
+                        </div>
+                        {hasMore && filteredProducts.length > 0 && (
+                            <div className="flex justify-center mt-12">
+                                <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={loadMore}
+                                    disabled={loading}
+                                    className="flex items-center gap-2 px-8 py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    {loading ? (
+                                        <>
+                                            <FaSpinner className="animate-spin" />
+                                            Loading...
+                                        </>
+                                    ) : (
+                                        <>
+                                            Load More <FaChevronDown />
+                                        </>
+                                    )}
+                                </motion.button>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
         </div>
