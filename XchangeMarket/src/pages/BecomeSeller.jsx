@@ -9,7 +9,33 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import bgImage from '../assets/Becoming_an_online_seller.jpg';
 
-import { locationData } from '../data/locations';
+const locationData = {
+    "Colombo": ["Colombo 1", "Colombo 2", "Dehiwala", "Mount Lavinia", "Moratuwa", "Kotte", "Battaramulla", "Nugegoda", "Maharagama", "Piliyandala"],
+    "Gampaha": ["Gampaha", "Negombo", "Kelaniya", "Kiribathgoda", "Kadawatha", "Wattala", "Minuwangoda", "Ja-Ela"],
+    "Kalutara": ["Kalutara", "Panadura", "Horana", "Matugama", "Beruwala", "Aluthgama"],
+    "Kandy": ["Kandy", "Peradeniya", "Katugastota", "Gampola", "Nawalapitiya", "Kundasale"],
+    "Matale": ["Matale", "Dambulla", "Sigiriya"],
+    "Nuwara Eliya": ["Nuwara Eliya", "Hatton", "Talawakele"],
+    "Galle": ["Galle", "Hikkaduwa", "Karapitiya", "Ambalangoda", "Elpitiya", "Bentota"],
+    "Matara": ["Matara", "Weligama", "Dikwella", "Akuressa"],
+    "Hambantota": ["Hambantota", "Tangalle", "Tissamaharama", "Ambalantota"],
+    "Jaffna": ["Jaffna", "Nallur", "Chavakachcheri", "Point Pedro"],
+    "Kilinochchi": ["Kilinochchi"],
+    "Mannar": ["Mannar"],
+    "Vavuniya": ["Vavuniya"],
+    "Mullaitivu": ["Mullaitivu"],
+    "Batticaloa": ["Batticaloa", "Kattankudy", "Eravur"],
+    "Ampara": ["Ampara", "Kalmunai", "Sainthamaruthu"],
+    "Trincomalee": ["Trincomalee", "Kinniya", "Kantale"],
+    "Kurunegala": ["Kurunegala", "Kuliyapitiya", "Pannala", "Narammala"],
+    "Puttalam": ["Puttalam", "Chilaw", "Wennappuwa", "Marawila"],
+    "Anuradhapura": ["Anuradhapura", "Kekirawa", "Thambuttegama"],
+    "Polonnaruwa": ["Polonnaruwa", "Kaduruwela", "Medirigiriya"],
+    "Badulla": ["Badulla", "Bandarawela", "Haputale", "Ella", "Mahiyanganaya"],
+    "Monaragala": ["Monaragala", "Wellawaya", "Bibile", "Kataragama"],
+    "Ratnapura": ["Ratnapura", "Embilipitiya", "Balangoda", "Pelmadulla"],
+    "Kegalle": ["Kegalle", "Mawanella", "Warakapola", "Rambukkana"]
+};
 
 const BecomeSeller = () => {
     const { t } = useLanguage();

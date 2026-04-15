@@ -560,10 +560,8 @@ const VehicleCard = ({
                         </svg>
                     </button>
 
-                    <div className="absolute top-3 right-3 flex flex-col gap-2 items-end z-10">
-                        <div className={`${offerPercentage === 'Unavailable' ? 'bg-gray-500' : 'bg-red-600'} text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-lg uppercase tracking-widest`}>
-                            {offerPercentage === 'Unavailable' ? 'Sold Out' : badgeText}
-                        </div>
+                    <div className={`absolute top-3 right-3 ${offerPercentage === 'Unavailable' ? 'bg-gray-500' : 'bg-red-600'} text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-lg z-10 uppercase tracking-widest`}>
+                        {offerPercentage === 'Unavailable' ? 'Sold Out' : badgeText}
                     </div>
 
                     <div className="absolute bottom-3 right-3 z-10">
@@ -590,7 +588,7 @@ const VehicleCard = ({
                         </h3>
                     </div>
 
-                    <div className="flex items-center text-gray-500 text-xs font-medium mb-4 w-fit">
+                    <div className="flex items-center text-gray-500 text-xs font-medium mb-4">
                         <svg className="w-4 h-4 mr-1 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -667,13 +665,13 @@ const VehicleCard = ({
 
                                 <div className="text-center">
                                     <h2 className="text-2xl font-bold text-gray-900 mb-2">{price}</h2>
-                                    <div className="text-gray-500 flex items-center justify-center gap-1 w-fit mx-auto">
+                                    <p className="text-gray-500 flex items-center justify-center gap-1">
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                         </svg>
                                         {location}
-                                    </div>
+                                    </p>
                                 </div>
                             </div>
 

@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { locationData } from '../data/locations';
 import { productAPI, orderAPI, sellerAPI, notificationAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
-import { FaBox, FaPlus, FaChartLine, FaEdit, FaTrash, FaUpload, FaStore, FaMoneyBillWave, FaSpinner, FaExclamationTriangle, FaCheck, FaTimes, FaClipboardList, FaBell, FaMapMarkerAlt, FaLocationArrow, FaLink } from 'react-icons/fa';
+import { FaBox, FaPlus, FaChartLine, FaEdit, FaTrash, FaUpload, FaStore, FaMoneyBillWave, FaSpinner, FaExclamationTriangle, FaCheck, FaTimes, FaClipboardList, FaBell } from 'react-icons/fa';
 
 const SellerDashboard = () => {
     const { user } = useAuth();
@@ -34,8 +33,6 @@ const SellerDashboard = () => {
         category: '',
         stockQuantity: '',
         description: '',
-        district: '',
-        city: '',
         images: [],
     });
 
@@ -112,9 +109,8 @@ const SellerDashboard = () => {
             setTrackingStatuses(trackingMap);
         } catch (err) {
             console.error('Error fetching orders:', err);
-            const errorMsg = err.response?.data?.message || err.message || 'Failed to load orders';
-            setError(`Failed to load orders: ${errorMsg}`);
-            toast.error(`Order Fetch Error: ${errorMsg}`);
+            setError('Failed to load orders. Please refresh the page.');
+            toast.error('Failed to load orders');
         } finally {
             setOrdersLoading(false);
         }
@@ -313,28 +309,12 @@ const SellerDashboard = () => {
 
     const handleEditClick = (product) => {
         setEditingProduct(product);
-
-        // Find matching district case-insensitively from locationData
-        let matchedDistrict = product.district || '';
-        if (matchedDistrict) {
-            const foundKey = Object.keys(locationData).find(d => d.toLowerCase() === matchedDistrict.toLowerCase());
-            if (foundKey) matchedDistrict = foundKey;
-        }
-
-        let matchedCity = product.city || '';
-        if (matchedDistrict && locationData[matchedDistrict] && matchedCity) {
-            const foundCity = locationData[matchedDistrict].find(c => c.toLowerCase() === matchedCity.toLowerCase());
-            if (foundCity) matchedCity = foundCity;
-        }
-
         setFormData({
-            name: product.name || '',
-            price: product.price ? product.price.toString() : '',
-            category: product.category || '',
-            stockQuantity: product.stockQuantity !== null && product.stockQuantity !== undefined ? product.stockQuantity.toString() : '',
-            description: product.description || '',
-            district: matchedDistrict,
-            city: matchedCity,
+            name: product.name,
+            price: product.price.toString(),
+            category: product.category,
+            stockQuantity: product.stockQuantity.toString(),
+            description: product.description,
             images: product.images || [],
         });
         setImagePreviews(product.images || []);
@@ -348,7 +328,7 @@ const SellerDashboard = () => {
                 ...formData,
                 price: parseFloat(formData.price),
                 stockQuantity: parseInt(formData.stockQuantity),
-                status: 'ACTIVE'
+                status: 'Active'
             };
 
             if (editingProduct) {
@@ -359,7 +339,7 @@ const SellerDashboard = () => {
                 toast.success('Product published successfully!');
             }
 
-            setFormData({ name: '', price: '', category: '', stockQuantity: '', description: '', district: '', city: '', images: [] });
+            setFormData({ name: '', price: '', category: '', stockQuantity: '', description: '', images: [] });
             setImagePreviews([]);
             setEditingProduct(null);
             setShowConfirmModal(false);
@@ -769,53 +749,6 @@ const SellerDashboard = () => {
                     ></textarea>
                 </div>
 
-                <div className="border border-gray-100 rounded-xl p-5 bg-gray-50/50">
-                    <label className="block text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
-                        <FaMapMarkerAlt className="text-red-500" />
-                        Shop Location
-                    </label>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-500 mb-1">
-                                District <span className="text-red-500">*</span>
-                            </label>
-                            <select
-                                required
-                                value={formData.district}
-                                onChange={(e) => setFormData({ ...formData, district: e.target.value, city: '' })}
-                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition bg-white"
-                            >
-                                <option value="">Select District</option>
-                                {Object.keys(locationData).sort().map((district) => (
-                                    <option key={district} value={district}>
-                                        {district}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-500 mb-1">
-                                City <span className="text-red-500">*</span>
-                            </label>
-                            <select
-                                required
-                                value={formData.city}
-                                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                                disabled={!formData.district}
-                                className={`w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition bg-white ${!formData.district ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
-                            >
-                                <option value="">Select City</option>
-                                {formData.district && locationData[formData.district] && [...locationData[formData.district]].sort().map((city) => (
-                                    <option key={city} value={city}>
-                                        {city}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Product Images (Max 5)</label>
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
@@ -894,12 +827,6 @@ const SellerDashboard = () => {
                         <div className="flex justify-between border-b border-gray-200 pb-2">
                             <span className="text-gray-500 font-medium">Stock:</span>
                             <span className="text-gray-800 font-semibold text-right">{formData.stockQuantity}</span>
-                        </div>
-                        <div className="flex justify-between border-b border-gray-200 pb-2">
-                            <span className="text-gray-500 font-medium">Location:</span>
-                            <span className="text-gray-800 font-semibold text-right">
-                                {[formData.city, formData.district].filter(Boolean).join(', ') || 'Not specified'}
-                            </span>
                         </div>
                         <div className="pt-2">
                             <span className="text-gray-500 font-medium block mb-2">Images:</span>
