@@ -1,0 +1,517 @@
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
+import { ProfileAvatar } from './ProfileAvatar';
+
+const Navbar = () => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+    const [isLocationOpen, setIsLocationOpen] = useState(false);
+
+    const { notifications, markAsRead, markAllAsRead } = useNotifications();
+
+    const { language, toggleLanguage, t } = useLanguage();
+    const { user, logout, isAuthenticated } = useAuth();
+    const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const navigate = useNavigate();
+
+    const [location, setLocation] = useState(null);
+
+    React.useEffect(() => {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition((position) => {
+                const { latitude, longitude } = position.coords;
+                // Using OpenStreetMap Nominatim for reverse geocoding (free, no key required for simple usage)
+                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const city = data.address.city || data.address.town || data.address.village || "Unknown Location";
+                        setLocation(city);
+                    })
+                    .catch(error => console.error("Error fetching location:", error));
+            }, (error) => {
+                console.error("Error getting location:", error);
+                setLocation("Loc: N/A");
+            });
+        } else {
+            setLocation("Loc: N/A");
+        }
+    }, []);
+
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
+    };
+
+    return (
+        <nav className="bg-white/90 backdrop-blur-md sticky top-0 z-50 border-b border-gray-100 transition-all duration-300">
+            <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
+                <div className="flex justify-between h-20 items-center">
+                    {/* Logo Section */}
+                    <div className="flex-shrink-0 flex items-center group cursor-pointer">
+                        <Link to="/" className="text-4xl font-black tracking-tighter flex items-center gap-1">
+                            <span className="text-red-600 group-hover:scale-110 transition-transform duration-300">X</span>
+                            <span className="text-blue-900 transition-colors">CHANGE</span>
+                        </Link>
+                    </div>
+
+                    {/* Search Bar - Modern & Minimal */}
+                    <div className="hidden md:flex flex-1 items-center justify-center px-12">
+                        <div className="w-full max-w-lg relative group">
+                            <input
+                                type="text"
+                                placeholder={t.search}
+                                className="w-full px-6 py-3 pl-12 pr-4 rounded-full border border-gray-200 bg-gray-50 text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 focus:bg-white transition-all duration-300 shadow-sm group-hover:shadow-md"
+                            />
+                            <div className="absolute left-4 top-3.5 text-gray-400 group-hover:text-red-500 transition-colors duration-300">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Desktop Menu */}
+                    <div className="hidden lg:flex items-center space-x-8 xl:space-x-12">
+                        {/* Links section */}
+                        <div className="flex items-center space-x-6 xl:space-x-8">
+                            <Link to="/" className="font-bold text-[13px] xl:text-sm uppercase tracking-wider text-gray-700 hover:text-red-600 transition duration-300 relative group py-2">
+                                {t.home}
+                                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-red-600 transition-all duration-300 group-hover:w-full"></span>
+                            </Link>
+                            <Link to="/products" className="font-bold text-[13px] xl:text-sm uppercase tracking-wider text-gray-700 hover:text-red-600 transition duration-300 relative group py-2">
+                                {t.products || 'Products'}
+                                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-red-600 transition-all duration-300 group-hover:w-full"></span>
+                            </Link>
+                            <Link to="/about" className="font-bold text-[13px] xl:text-sm uppercase tracking-wider text-gray-700 hover:text-red-600 transition duration-300 relative group py-2">
+                                {t.about}
+                                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-red-600 transition-all duration-300 group-hover:w-full"></span>
+                            </Link>
+                            <Link to="/contact" className="font-bold text-[13px] xl:text-sm uppercase tracking-wider text-gray-700 hover:text-red-600 transition duration-300 relative group py-2">
+                                {t.contact}
+                                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-red-600 transition-all duration-300 group-hover:w-full"></span>
+                            </Link>
+
+                            {(user?.role === 'ADMIN' || user?.role === 'ROLE_ADMIN' || user?.roles?.includes('ROLE_ADMIN')) && (
+                                <Link to="/admin/dashboard" className="font-bold text-[13px] xl:text-sm uppercase tracking-wider text-red-600 hover:text-red-700 transition duration-300 relative group py-2">
+                                    ADMIN PANEL
+                                    <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-red-600 transition-all duration-300 group-hover:w-full"></span>
+                                </Link>
+                            )}
+                        </div>
+
+                        <div className="h-8 w-px bg-gray-200"></div>
+
+                        {/* Actions section */}
+                        <div className="flex items-center space-x-5 xl:space-x-6">
+                            {/* Notification Icon */}
+                            <div className="relative">
+                                <button
+                                    onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                                    className="p-2 text-gray-600 hover:text-red-600 transition-colors relative group rounded-full hover:bg-gray-100"
+                                >
+                                    <svg className="w-6 h-6 group-hover:animate-swing origin-top" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+                                    {notifications.filter(n => n.unread).length > 0 && (
+                                        <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 border-2 border-white"></span>
+                                        </span>
+                                    )}
+                                </button>
+
+                                {/* Notification Dropdown */}
+                                {isNotificationOpen && (
+                                    <>
+                                        <div className="fixed inset-0 z-40" onClick={() => setIsNotificationOpen(false)}></div>
+                                        <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden transform transition-all origin-top-right">
+                                            <div className="p-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
+                                                <div className="flex items-center gap-2">
+                                                    <h3 className="font-bold text-gray-900">Notifications</h3>
+                                                    <span className="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">
+                                                        {notifications.filter(n => n.unread).length} New
+                                                    </span>
+                                                </div>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        markAllAsRead();
+                                                    }}
+                                                    className="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors disabled:text-gray-400 disabled:cursor-not-allowed"
+                                                    disabled={notifications.filter(n => n.unread).length === 0}
+                                                >
+                                                    Mark all read
+                                                </button>
+                                            </div>
+                                            <div className="max-h-[400px] overflow-y-auto">
+                                                {notifications.length > 0 ? notifications.map(notif => (
+                                                    <div key={notif.id} className={`p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer ${notif.unread ? 'bg-blue-50/20' : ''}`} onClick={() => {
+                                                        markAsRead(notif.id);
+                                                    }}>
+                                                        <div className="flex gap-3">
+                                                            <div className={`mt-1.5 h-2 w-2 rounded-full flex-shrink-0 ${notif.unread ? 'bg-red-500' : 'bg-transparent'}`}></div>
+                                                            <div>
+                                                                <p className={`text-sm leading-snug ${notif.unread ? 'text-gray-900 font-semibold' : 'text-gray-600'}`}>{notif.text}</p>
+                                                                <p className="text-xs text-gray-400 mt-1.5">{notif.time}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )) : (
+                                                    <div className="p-6 text-center text-gray-500 text-sm">No new notifications</div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+
+
+
+                            <Link
+                                to={isAuthenticated ? ((user?.hasShop && (user?.roles?.includes('ROLE_SELLER') || user?.role === 'SELLER')) ? "/seller-dashboard" : "/become-seller") : "/login?role=seller"}
+                                className="px-6 py-2.5 rounded-full font-bold text-[12px] uppercase tracking-widest text-white bg-black hover:bg-red-600 transition-all duration-300 shadow-xl shadow-gray-200 transform hover:scale-105 active:scale-95 flex items-center gap-2 whitespace-nowrap"
+                            >
+                                <span>{isAuthenticated && user?.hasShop && (user?.roles?.includes('ROLE_SELLER') || user?.role === 'SELLER') ? "DASHBOARD" : t.becomeSeller}</span>
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                            </Link>
+
+                            <button
+                                onClick={toggleLanguage}
+                                className="bg-gray-50 border border-gray-100 text-gray-800 hover:bg-gray-100 font-black py-2 px-3 rounded-lg transition-colors duration-300 text-[11px] uppercase tracking-widest shadow-sm"
+                            >
+                                {language === 'EN' ? 'සිං' : 'EN'}
+                            </button>
+
+                            {/* Location Icon & Dropdown */}
+                            <div className="relative hidden md:flex items-center">
+                                <button
+                                    onClick={() => setIsLocationOpen(!isLocationOpen)}
+                                    className="p-2 text-gray-600 hover:text-red-600 transition-colors relative group rounded-full hover:bg-gray-100 flex items-center justify-center"
+                                    title="View Location"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 group-hover:animate-bounce origin-bottom" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                    {location && location !== "Loc: N/A" && (
+                                        <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
+                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500 border-2 border-white"></span>
+                                        </span>
+                                    )}
+                                </button>
+
+                                {isLocationOpen && (
+                                    <>
+                                        <div className="fixed inset-0 z-40" onClick={() => setIsLocationOpen(false)}></div>
+                                        <div className="absolute right-0 mt-4 w-72 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden transform transition-all origin-top-right animate-in fade-in zoom-in duration-200">
+                                            <div className="p-4 bg-gradient-to-r from-gray-50 to-white border-b border-gray-100 flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="p-1.5 bg-red-100 rounded-lg text-red-600">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                                                        </svg>
+                                                    </div>
+                                                    <h3 className="font-bold text-gray-900 text-sm">{t.location || 'Location'}</h3>
+                                                </div>
+                                                <button
+                                                    onClick={() => window.location.reload()}
+                                                    className="p-1.5 hover:bg-gray-100 rounded-full text-gray-400 hover:text-red-500 transition-colors"
+                                                    title="Refresh Location"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                            <div className="p-6 text-center">
+                                                {location && location !== "Loc: N/A" ? (
+                                                    <div className="space-y-2">
+                                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Currently In</p>
+                                                        <p className="text-xl font-black text-blue-900 uppercase tracking-tight">{location}</p>
+                                                        <div className="pt-2">
+                                                            <span className="inline-flex items-center px-2 py-1 rounded-md bg-green-50 text-[10px] font-bold text-green-600 uppercase tracking-tighter">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 mr-1.5 animate-pulse"></span>
+                                                                Live Access
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="space-y-4">
+                                                        <div className="flex justify-center">
+                                                            <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center text-gray-300">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                                                </svg>
+                                                            </div>
+                                                        </div>
+                                                        <p className="text-xs text-gray-500 leading-relaxed font-semibold px-2">
+                                                            Location access is blocked. Please enable it in your browser settings to see nearby deals.
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                             {isAuthenticated ? (
+                                <div className="relative group">
+                                    <button 
+                                        onClick={() => setIsProfileOpen(!isProfileOpen)}
+                                        className="flex items-center gap-2 p-1.5 rounded-full hover:bg-gray-50 transition-all duration-300 border border-transparent hover:border-gray-100"
+                                    >
+                                        <div className="group-hover:shadow-md transition-all">
+                                            <ProfileAvatar
+                                              profilePhotoUrl={user?.profilePhotoUrl}
+                                              name={user?.name || 'User'}
+                                              size="sm"
+                                              ringClass="border-2 border-white shadow-sm"
+                                            />
+                                        </div>
+                                        <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 text-gray-400 transition-transform duration-300 ${isProfileOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+
+                                    {/* Profile Dropdown */}
+                                    {isProfileOpen && (
+                                        <>
+                                            <div className="fixed inset-0 z-40" onClick={() => setIsProfileOpen(false)}></div>
+                                            <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-gray-100 z-50 overflow-hidden transform animate-in fade-in slide-in-from-top-2 duration-200">
+                                                <div className="p-5 bg-gradient-to-br from-gray-50 to-white flex items-center gap-4 border-b border-gray-100">
+                                                    <ProfileAvatar
+                                                      profilePhotoUrl={user?.profilePhotoUrl}
+                                                      name={user?.name || 'User'}
+                                                      size="md"
+                                                      ringClass="border-2 border-white shadow-sm"
+                                                    />
+                                                    <div>
+                                                        <div className="text-sm font-black text-slate-900 uppercase tracking-tight truncate max-w-[130px]">{user?.name}</div>
+                                                        <div className="text-[10px] text-gray-500 font-bold truncate max-w-[130px]">{user?.email}</div>
+                                                    </div>
+                                                </div>
+                                                <div className="p-2">
+                                                    <Link to="/account" className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-all" onClick={() => setIsProfileOpen(false)}>
+                                                        <svg className="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                                                        Your Profile
+                                                    </Link>
+                                                    {user?.hasShop && (
+                                                        <Link to="/seller-dashboard" className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-gray-700 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl transition-all" onClick={() => setIsProfileOpen(false)}>
+                                                            <svg className="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                                            Repositories (My Ads)
+                                                        </Link>
+                                                    )}
+                                                    <Link to="/account?tab=orders" className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-gray-700 hover:bg-amber-50 hover:text-amber-600 rounded-xl transition-all" onClick={() => setIsProfileOpen(false)}>
+                                                        <svg className="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
+                                                        Order History
+                                                    </Link>
+                                                    <hr className="my-2 border-gray-100 mx-2" />
+                                                    <button onClick={() => { handleLogout(); setIsProfileOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50 rounded-xl transition-all">
+                                                        <svg className="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+                                                        Sign out
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                             ) : (
+                                <Link to="/login" className="font-bold text-sm uppercase tracking-wider text-gray-700 hover:text-red-600 transition duration-300 ml-4">
+                                    {t.login}
+                                </Link>
+                             )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Mobile Menu Button */}
+                    <div className="lg:hidden flex items-center space-x-3">
+                        {/* Mobile Location Icon */}
+                        <div className="relative">
+                            <button
+                                onClick={() => setIsLocationOpen(!isLocationOpen)}
+                                className="p-2 text-gray-600 hover:text-red-600 transition-colors relative"
+                                title="View Location"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                {location && location !== "Loc: N/A" && (
+                                    <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500 border-2 border-white"></span>
+                                    </span>
+                                )}
+                            </button>
+                            {isLocationOpen && (
+                                <>
+                                    <div className="fixed inset-0 z-40" onClick={() => setIsLocationOpen(false)}></div>
+                                    <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden transform transition-all origin-top-right">
+                                        <div className="p-4 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                                            </svg>
+                                            <h3 className="font-bold text-gray-900 text-sm">Your Location</h3>
+                                        </div>
+                                        <div className="p-6 text-center">
+                                            {location && location !== "Loc: N/A" ? (
+                                                <div>
+                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1.5">Detected Area</p>
+                                                    <p className="text-lg font-black text-blue-900 uppercase tracking-wider">{location}</p>
+                                                </div>
+                                            ) : (
+                                                <p className="text-xs text-gray-500 leading-relaxed font-medium">Location not available.</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
+                        <div className="relative">
+                            <button
+                                onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                                className="p-2 text-gray-600 hover:text-red-600 transition-colors relative"
+                            >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+                                {notifications.filter(n => n.unread).length > 0 && (
+                                    <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500 border-2 border-white"></span>
+                                    </span>
+                                )}
+                            </button>
+
+                            {isNotificationOpen && (
+                                <>
+                                    <div className="fixed inset-0 z-40" onClick={() => setIsNotificationOpen(false)}></div>
+                                    <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden transform transition-all origin-top-right">
+                                        <div className="p-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
+                                            <div className="flex items-center gap-2">
+                                                <h3 className="font-bold text-gray-900">Notifications</h3>
+                                                <span className="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">
+                                                    {notifications.filter(n => n.unread).length} New
+                                                </span>
+                                            </div>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    markAllAsRead();
+                                                }}
+                                                className="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors disabled:text-gray-400 disabled:cursor-not-allowed"
+                                                disabled={notifications.filter(n => n.unread).length === 0}
+                                            >
+                                                Mark all read
+                                            </button>
+                                        </div>
+                                        <div className="max-h-[400px] overflow-y-auto">
+                                            {notifications.length > 0 ? notifications.map(notif => (
+                                                <div key={notif.id} className={`p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer ${notif.unread ? 'bg-blue-50/20' : ''}`} onClick={() => {
+                                                    markAsRead(notif.id);
+                                                }}>
+                                                    <div className="flex gap-3">
+                                                        <div className={`mt-1.5 h-2 w-2 rounded-full flex-shrink-0 ${notif.unread ? 'bg-red-500' : 'bg-transparent'}`}></div>
+                                                        <div>
+                                                            <p className={`text-sm leading-snug ${notif.unread ? 'text-gray-900 font-semibold' : 'text-gray-600'}`}>{notif.text}</p>
+                                                            <p className="text-xs text-gray-400 mt-1.5">{notif.time}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )) : (
+                                                <div className="p-6 text-center text-gray-500 text-sm">No new notifications</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
+                        <button
+                            onClick={toggleLanguage}
+                            className="text-[11px] uppercase tracking-widest font-black bg-gray-50 border border-gray-100 p-2 rounded-lg"
+                        >
+                            {language === 'EN' ? 'සිං' : 'EN'}
+                        </button>
+                        <button
+                            onClick={() => setIsOpen(!isOpen)}
+                            className="text-gray-700 hover:text-red-600 focus:outline-none transition-transform active:scale-95"
+                        >
+                            <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                {isOpen ? (
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                ) : (
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                                )}
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Mobile Menu */}
+            <div className={`md:hidden bg-white/95 backdrop-blur-xl absolute w-full left-0 border-b border-gray-100 shadow-xl transition-all duration-300 ease-in-out origin-top ${isOpen ? 'opacity-100 scale-y-100 max-h-screen py-4' : 'opacity-0 scale-y-0 max-h-0 overflow-hidden'}`}>
+                <div className="px-6 space-y-4 flex flex-col">
+                    <Link to="/" className="text-lg font-bold text-gray-800 hover:text-red-600 transition-colors" onClick={() => setIsOpen(false)}>
+                        {t.home}
+                    </Link>
+                    <Link to="/products" className="text-lg font-bold text-gray-800 hover:text-red-600 transition-colors" onClick={() => setIsOpen(false)}>
+                        {t.products || 'Products'}
+                    </Link>
+                    <Link to="/about" className="text-lg font-bold text-gray-800 hover:text-red-600 transition-colors" onClick={() => setIsOpen(false)}>
+                        {t.about}
+                    </Link>
+                    <Link to="/contact" className="text-lg font-bold text-gray-800 hover:text-red-600 transition-colors" onClick={() => setIsOpen(false)}>
+                        {t.contact}
+                    </Link>
+                    {(user?.role === 'ADMIN' || user?.role === 'ROLE_ADMIN' || user?.roles?.includes('ROLE_ADMIN')) && (
+                        <Link to="/admin/dashboard" className="text-lg font-bold text-red-600 hover:text-red-700 transition-colors" onClick={() => setIsOpen(false)}>
+                            ADMIN PANEL
+                        </Link>
+                    )}
+                    <hr className="border-gray-100" />
+                    {isAuthenticated ? (
+                        <>
+                            <div className="flex items-center gap-4 p-2 bg-gray-50 rounded-2xl">
+                                <ProfileAvatar
+                                  profilePhotoUrl={user?.profilePhotoUrl}
+                                  name={user?.name || 'User'}
+                                  size="md"
+                                  ringClass="border-2 border-white shadow-sm"
+                                />
+                                <div>
+                                    <div className="text-sm font-black text-gray-900 uppercase tracking-tight">{user?.name}</div>
+                                    <div className="text-[10px] text-gray-500 font-bold truncate max-w-[150px]">{user?.email}</div>
+                                </div>
+                            </div>
+                            <Link to="/account" className="text-lg font-bold text-gray-800 hover:text-red-600 transition-colors" onClick={() => setIsOpen(false)}>
+                                ACCOUNT SETTINGS
+                            </Link>
+                            <Link to="/account?tab=orders" className="text-lg font-bold text-gray-800 hover:text-red-600 transition-colors" onClick={() => setIsOpen(false)}>
+                                ORDER HISTORY
+                            </Link>
+                            <button
+                                onClick={() => { handleLogout(); setIsOpen(false); }}
+                                className="text-left text-lg font-bold text-red-600 hover:text-red-700 transition-colors uppercase tracking-tight"
+                            >
+                                LOGOUT
+                            </button>
+                        </>
+                    ) : (
+                        <Link to="/login" className="text-lg font-bold text-gray-800 hover:text-red-600 transition-colors" onClick={() => setIsOpen(false)}>
+                            {t.login}
+                        </Link>
+                    )}
+                    <Link
+                        to={isAuthenticated ? ((user?.hasShop && (user?.roles?.includes('ROLE_SELLER') || user?.role === 'SELLER')) ? "/seller-dashboard" : "/become-seller") : "/login?role=seller"}
+                        className="w-full text-center px-6 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 transition-all shadow-lg"
+                        onClick={() => setIsOpen(false)}
+                    >
+                        {isAuthenticated && user?.hasShop && (user?.roles?.includes('ROLE_SELLER') || user?.role === 'SELLER') ? "DASHBOARD" : t.becomeSeller}
+                    </Link>
+                </div>
+            </div>
+        </nav>
+    );
+};
+export default Navbar;
