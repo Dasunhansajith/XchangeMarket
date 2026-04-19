@@ -3,10 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { productAPI, orderAPI, sellerAPI, notificationAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
-import { FaBox, FaPlus, FaChartLine, FaEdit, FaTrash, FaUpload, FaStore, FaMoneyBillWave, FaSpinner, FaExclamationTriangle, FaCheck, FaTimes, FaClipboardList, FaBell, FaDownload, FaMapMarkerAlt } from 'react-icons/fa';
+import { FaBox, FaPlus, FaChartLine, FaEdit, FaTrash, FaUpload, FaStore, FaMoneyBillWave, FaSpinner, FaExclamationTriangle, FaCheck, FaTimes, FaClipboardList, FaBell, FaDownload, FaMapMarkerAlt, FaTag } from 'react-icons/fa';
 import { locationData } from '../data/locations';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import SellerPromotions from './SellerPromotions';
 
 const SellerDashboard = () => {
     const { user } = useAuth();
@@ -1680,6 +1681,13 @@ const SellerDashboard = () => {
                             >
                                 <FaChartLine /> Sales Report
                             </button>
+
+                            <button
+                                onClick={() => setActiveTab('promotions')}
+                                className={`w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 transition-colors ${activeTab === 'promotions' ? 'bg-red-50 text-red-600 font-semibold' : 'text-gray-600 hover:bg-gray-50'}`}
+                            >
+                                <FaTag /> Promotions
+                            </button>
                         </div>
                     </div>
 
@@ -1696,6 +1704,7 @@ const SellerDashboard = () => {
                             {activeTab === 'orders' && renderOrders()}
                             {activeTab === 'add' && renderAddProduct()}
                             {activeTab === 'report' && renderSalesReport()}
+                            {activeTab === 'promotions' && <SellerPromotions />}
                         </motion.div>
                     </div>
 

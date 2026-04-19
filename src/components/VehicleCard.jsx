@@ -7,12 +7,22 @@ import { useWishlist } from '../context/WishlistContext';
 import { orderAPI, paymentAPI } from '../services/api';
 import peoplesBankLogo from '../assets/peoplesbank.png';
 import ProductReviews from './ProductReviews';
+import { promotionAPI } from '../services/api';
+import PromotionSelectionComponent from './PromotionSelectionComponent';
+import { toast } from 'react-hot-toast';
 
-export const CheckoutModal = ({ isOpen, onClose, product, priceRaw, contactNumber, stockQuantity }) => {
+export const CheckoutModal = ({ isOpen, onClose, product, priceRaw, contactNumber, stockQuantity, sellerId, category }) => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const [step, setStep] = useState(1); // 1: Shipping, 2: Payment/Review
     const [quantity, setQuantity] = useState(1);
+    const [stripePaymentInitiated, setStripePaymentInitiated] = useState(false);
+    
+    // --- NEW PROMOTION STATE ---
+    const [availablePromotions, setAvailablePromotions] = useState([]);
+    const [selectedPromoId, setSelectedPromoId] = useState(null);
+    const [adminPromo, setAdminPromo] = useState(null);
+    const [promoLoading, setPromoLoading] = useState(false);
 
     // Parse price: remove "Rs", commas, spaces
     const numericPrice = parseFloat(priceRaw.replace(/[^0-9.]/g, '')) || 0;
@@ -53,7 +63,72 @@ export const CheckoutModal = ({ isOpen, onClose, product, priceRaw, contactNumbe
         }
     }, [shippingDetails.district]);
 
-    const total = (numericPrice * quantity) + deliveryFee;
+    // --- FETCH PROMOTIONS ---
+    useEffect(() => {
+        if (isOpen && user) {
+            const fetchPromos = async () => {
+                setPromoLoading(true);
+                try {
+                    const sellerIds = [sellerId || product.sellerId].filter(Boolean);
+                    if (sellerIds.length === 0) {
+                        console.warn("No sellerId provided for promotion lookup");
+                    }
+                    const res = await promotionAPI.getAvailablePromotions(user.email, sellerIds);
+                    setAvailablePromotions(res.data);
+                    
+
+
+                    // Pre-select Welcome Promo if available (as a nice gesture for first-time buyers)
+                    const welcome = res.data.find(p => p.id === 'WELCOME_PROMO' && !p.used);
+                    if (welcome) setSelectedPromoId('WELCOME_PROMO');
+                } catch (err) {
+                    console.error("Failed to fetch promotions", err);
+                } finally {
+                    setPromoLoading(false);
+                }
+            };
+            fetchPromos();
+        }
+    }, [isOpen, user, product.sellerId]);
+
+    // --- CALCULATE DISCOUNT (client-side, instant) ---
+    const subtotal = numericPrice * quantity;
+
+    // Determine the active promo object: strictly based on user selection
+    const activePromo = availablePromotions.find(p => p.id === selectedPromoId) || null;
+
+    // Calculate savings immediately from the promo object — no async needed for display
+    const calcSavings = (promo) => {
+        if (!promo || promo.expired || promo.used) return 0;
+        if (promo.discountType === 'PERCENTAGE') {
+            return (subtotal * promo.value) / 100;
+        }
+        return Number(promo.value) || 0;
+    };
+
+    const appliedSavings = calcSavings(activePromo);
+    const total = subtotal + deliveryFee - appliedSavings;
+
+    // Fire-and-forget: notify backend for validation & show toast
+    useEffect(() => {
+        if (!activePromo || appliedSavings <= 0) return;
+
+        // Show instant toast when a promo is selected
+        toast.success(`Savings Applied! Rs ${appliedSavings.toLocaleString(undefined, {maximumFractionDigits: 0})} Off`, {
+            icon: '🎁',
+            id: 'promo-toast', // prevent duplicate toasts
+            duration: 2000,
+            position: 'bottom-right',
+            style: {
+                borderRadius: '20px',
+                background: '#111',
+                color: '#fff',
+                fontWeight: 'bold',
+                fontSize: '14px',
+                border: '1px solid #333'
+            }
+        });
+    }, [activePromo?.id, appliedSavings]);
 
     const handleInputChange = (e) => {
         setShippingDetails({
@@ -79,7 +154,8 @@ export const CheckoutModal = ({ isOpen, onClose, product, priceRaw, contactNumbe
                     quantity: quantity,
                     shippingAddress: `${shippingDetails.address}, ${shippingDetails.zip}, ${shippingDetails.district}`,
                     buyerName: shippingDetails.name,
-                    buyerPhone: user?.phone || contactNumber
+                    buyerPhone: user?.phone || contactNumber,
+                    promotionId: selectedPromoId || (adminPromo ? adminPromo.id : null)
                 };
 
                 // Save checkout data to localStorage for PaymentSuccess page
@@ -121,7 +197,8 @@ export const CheckoutModal = ({ isOpen, onClose, product, priceRaw, contactNumbe
                 shippingAddress: `${shippingDetails.address}, ${shippingDetails.zip}, ${shippingDetails.district}`,
                 buyerName: shippingDetails.name,
                 buyerPhone: user?.phone || contactNumber,
-                paymentMethod: paymentMethod === 'online' ? 'BANK_TRANSFER' : 'CASH_ON_DELIVERY'
+                paymentMethod: paymentMethod === 'online' ? 'BANK_TRANSFER' : 'CASH_ON_DELIVERY',
+                promotionId: selectedPromoId || (adminPromo ? adminPromo.id : null)
             };
 
             await orderAPI.placeOrder(orderData);
@@ -144,7 +221,7 @@ export const CheckoutModal = ({ isOpen, onClose, product, priceRaw, contactNumbe
     if (!isOpen) return null;
 
     return createPortal(
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl relative flex flex-col max-h-[90vh]">
                 {/* Header */}
                 <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
@@ -235,6 +312,27 @@ export const CheckoutModal = ({ isOpen, onClose, product, priceRaw, contactNumbe
                                 <option value="Colombo">Colombo</option>
                             </select>
                         </div>
+                    </div>
+
+                    {/* Promotion Selection */}
+                    <div className="mb-6">
+                        {promoLoading ? (
+                            <div className="flex items-center justify-center p-6 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                                <div className="flex items-center gap-3 text-gray-400">
+                                    <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                    <span className="text-sm font-bold uppercase tracking-tight">Checking available offers...</span>
+                                </div>
+                            </div>
+                        ) : (
+                            <PromotionSelectionComponent 
+                                promotions={availablePromotions}
+                                selectedPromoId={selectedPromoId}
+                                onSelect={setSelectedPromoId}
+                                adminPromo={adminPromo}
+                                subtotal={subtotal}
+                                product={{ ...product, category }}
+                            />
+                        )}
                     </div>
 
                     {/* Payment Method */}
@@ -368,18 +466,38 @@ export const CheckoutModal = ({ isOpen, onClose, product, priceRaw, contactNumbe
                     </div>
 
                     {/* Summary */}
-                    <div className="border-t border-gray-100 pt-4 space-y-2">
+                    <div className="border-t border-gray-100 pt-4 space-y-3">
                         <div className="flex justify-between text-sm text-gray-500">
                             <span>Subtotal</span>
-                            <span>Rs {(numericPrice * quantity).toLocaleString()}</span>
+                            <div className="flex flex-col items-end">
+                                {appliedSavings > 0 && (
+                                    <span className="text-xs text-gray-400 line-through">Rs {subtotal.toLocaleString()}</span>
+                                )}
+                                <span className={appliedSavings > 0 ? "text-gray-900 font-bold" : ""}>
+                                    Rs {subtotal.toLocaleString()}
+                                </span>
+                            </div>
                         </div>
+                        {activePromo && appliedSavings > 0 && (
+                            <div className="flex justify-between text-sm text-green-600 font-bold bg-green-50/50 p-3 rounded-xl border border-green-100 animate-in slide-in-from-right-2 duration-300">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-1 bg-green-100 rounded-md">
+                                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 5a3 3 0 015-2.236A3 3 0 0114.83 6H16a2 2 0 110 4h-5V9a1 1 0 10-2 0v1H4a2 2 0 110-4h1.17C5.06 5.687 5 5.35 5 5zm4 1V5a1 1 0 10-1 1h1zm3 0a1 1 0 10-1-1v1h1z" clipRule="evenodd" /><path d="M9 11H3v5a2 2 0 002 2h4v-7zM11 18h4a2 2 0 002-2v-5h-6v7z" /></svg>
+                                    </div>
+                                    <span className="truncate max-w-[200px]">
+                                        Discount Applied <span className="text-[10px] font-black uppercase text-green-700 ml-1 bg-green-200/50 px-2 py-0.5 rounded-full">{activePromo.name}</span>
+                                    </span>
+                                </div>
+                                <span>-Rs {appliedSavings.toLocaleString()}</span>
+                            </div>
+                        )}
                         <div className="flex justify-between text-sm text-gray-500">
                             <span>Delivery Fee ({shippingDetails.district})</span>
                             <span>Rs {deliveryFee}</span>
                         </div>
-                        <div className="flex justify-between text-base font-bold text-gray-900 pt-2">
+                        <div className="flex justify-between text-base font-bold text-gray-900 pt-2 border-t border-gray-100">
                             <span>Total</span>
-                            <span>Rs {total.toLocaleString()}</span>
+                            <span className="text-xl text-red-600">Rs {total.toLocaleString()}</span>
                         </div>
                     </div>
                 </div>
@@ -428,7 +546,9 @@ const VehicleCard = ({
     badgeText = "New Arrival",
     stockQuantity = 1,
     averageRating = 0,
-    reviewCount = 0
+    reviewCount = 0,
+    sellerId,
+    category
 }) => {
     // Combine single image prop into the array if no images array is provided
     const sliderImages = images.length > 0 ? images : [image || "https://images.unsplash.com/photo-1619682817481-e994891cd1f5?q=80&w=2574&auto=format&fit=crop"];
@@ -515,10 +635,10 @@ const VehicleCard = ({
             {/* Main Card */}
             <div
                 onClick={() => setIsModalOpen(true)}
-                className="bg-white rounded-2xl shadow-sm hover:shadow-2xl transition-all duration-300 border border-gray-100 group cursor-pointer transform hover:-translate-y-1 overflow-hidden"
+                className="bg-white rounded-2xl shadow-sm hover:shadow-2xl transition-all duration-300 border border-gray-100 group cursor-pointer transform hover:-translate-y-2"
             >
                 {/* Preview Image Container */}
-                <div className="relative h-56 overflow-hidden bg-gray-100">
+                <div className="relative h-64 overflow-hidden bg-gray-100 rounded-t-2xl">
                     {sliderImages.map((img, index) => (
                         <div key={index} className="absolute inset-0 w-full h-full">
                             <img
@@ -577,7 +697,7 @@ const VehicleCard = ({
                 {/* Card Content */}
                 <div className="p-5">
                     <div className="flex justify-between items-start mb-2">
-                        <h3 className="text-lg font-bold text-gray-900 leading-snug line-clamp-2 group-hover:text-red-600 transition-colors flex items-center justify-between gap-2">
+                        <h3 className="text-lg font-bold text-gray-900 leading-snug group-hover:text-red-600 transition-colors flex items-center justify-between gap-2">
                             <span>{title}</span>
                             {(averageRating > 0) && (
                                 <div className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 bg-amber-50 rounded-lg border border-amber-100/50">
@@ -623,7 +743,7 @@ const VehicleCard = ({
 
             {/* Details Modal */}
             {isModalOpen && createPortal(
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
                     <div
                         className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-200 relative"
                         onClick={(e) => e.stopPropagation()}
@@ -767,7 +887,7 @@ const VehicleCard = ({
 
             {/* Phone Number Popup */}
             {isPhonePopupOpen && createPortal(
-                <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsPhonePopupOpen(false)}>
+                <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsPhonePopupOpen(false)}>
                     <div
                         className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200"
                         onClick={(e) => e.stopPropagation()}
@@ -810,15 +930,17 @@ const VehicleCard = ({
             <CheckoutModal
                 isOpen={isCheckoutOpen}
                 onClose={() => setIsCheckoutOpen(false)}
-                product={{ id, title, image: sliderImages[0] }}
+                product={{ id, title, image: sliderImages[0], sellerId, category }}
                 priceRaw={price}
                 contactNumber={contactNumber}
                 stockQuantity={stockQuantity}
+                sellerId={sellerId}
+                category={category}
             />
 
             {/* Full Screen Image Gallery */}
             {isGalleryOpen && createPortal(
-                <div className="fixed inset-0 z-[60] bg-black/95 backdrop-blur-sm flex items-center justify-center animate-in fade-in duration-200" onClick={() => setIsGalleryOpen(false)}>
+                <div className="fixed inset-0 z-[300] bg-black/95 backdrop-blur-sm flex items-center justify-center animate-in fade-in duration-200" onClick={() => setIsGalleryOpen(false)}>
                     {/* Close Button */}
                     <button
                         onClick={() => setIsGalleryOpen(false)}

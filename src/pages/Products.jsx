@@ -59,6 +59,8 @@ const ProductCardMemo = memo(({ product, index }) => {
                 stockQuantity={product.stockQuantity}
                 averageRating={product.averageRating || 0}
                 contactNumber={product.contactNumber || product.sellerPhone || "94766414622"}
+                sellerId={product.sellerId || product.shopId}
+                category={product.category}
             />
         </motion.div>
     );
@@ -180,7 +182,7 @@ const Products = () => {
     }, [searchQuery, selectedDistrict, selectedCity, selectedCategory]);
 
     return (
-        <div className="min-h-screen bg-gray-50 pt-28 pb-12">
+        <div className="min-h-screen bg-gray-50 pt-28 pb-24">
             <div className="container mx-auto px-4 max-w-7xl">
                 {/* Header */}
                 <div className="mb-10 text-center">
@@ -332,7 +334,7 @@ const Products = () => {
                     </motion.div>
                 ) : (
                     <>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
                             <AnimatePresence>
                                 {filteredProducts.map((product, index) => (
                                     <ProductCardMemo key={product.id || index} product={product} index={index} />
