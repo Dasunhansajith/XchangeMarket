@@ -46,7 +46,7 @@ const Navbar = () => {
     };
 
     return (
-        <nav className="bg-white/90 backdrop-blur-md sticky top-0 z-50 border-b border-gray-100 transition-all duration-300">
+        <nav className="bg-white/90 backdrop-blur-md sticky top-0 z-[100] border-b border-gray-100 transition-all duration-300">
             <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
                 <div className="flex justify-between h-20 items-center">
                     {/* Logo Section */}
@@ -124,8 +124,8 @@ const Navbar = () => {
                                 {/* Notification Dropdown */}
                                 {isNotificationOpen && (
                                     <>
-                                        <div className="fixed inset-0 z-40" onClick={() => setIsNotificationOpen(false)}></div>
-                                        <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden transform transition-all origin-top-right">
+                                        <div className="fixed inset-0 z-[105]" onClick={() => setIsNotificationOpen(false)}></div>
+                                        <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 z-[110] overflow-hidden transform transition-all origin-top-right">
                                             <div className="p-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
                                                 <div className="flex items-center gap-2">
                                                     <h3 className="font-bold text-gray-900">Notifications</h3>
@@ -203,8 +203,8 @@ const Navbar = () => {
 
                                 {isLocationOpen && (
                                     <>
-                                        <div className="fixed inset-0 z-40" onClick={() => setIsLocationOpen(false)}></div>
-                                        <div className="absolute right-0 mt-4 w-72 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden transform transition-all origin-top-right animate-in fade-in zoom-in duration-200">
+                                        <div className="fixed inset-0 z-[105]" onClick={() => setIsLocationOpen(false)}></div>
+                                        <div className="absolute right-0 mt-4 w-72 bg-white rounded-2xl shadow-2xl border border-gray-100 z-[110] overflow-hidden transform transition-all origin-top-right animate-in fade-in zoom-in duration-200">
                                             <div className="p-4 bg-gradient-to-r from-gray-50 to-white border-b border-gray-100 flex items-center justify-between">
                                                 <div className="flex items-center gap-2">
                                                     <div className="p-1.5 bg-red-100 rounded-lg text-red-600">
@@ -277,8 +277,8 @@ const Navbar = () => {
                                     {/* Profile Dropdown */}
                                     {isProfileOpen && (
                                         <>
-                                            <div className="fixed inset-0 z-40" onClick={() => setIsProfileOpen(false)}></div>
-                                            <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-gray-100 z-50 overflow-hidden transform animate-in fade-in slide-in-from-top-2 duration-200">
+                                            <div className="fixed inset-0 z-[105]" onClick={() => setIsProfileOpen(false)}></div>
+                                            <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-gray-100 z-[110] overflow-hidden transform animate-in fade-in slide-in-from-top-2 duration-200">
                                                 <div className="p-5 bg-gradient-to-br from-gray-50 to-white flex items-center gap-4 border-b border-gray-100">
                                                     <ProfileAvatar
                                                       profilePhotoUrl={user?.profilePhotoUrl}
@@ -346,8 +346,8 @@ const Navbar = () => {
                             </button>
                             {isLocationOpen && (
                                 <>
-                                    <div className="fixed inset-0 z-40" onClick={() => setIsLocationOpen(false)}></div>
-                                    <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden transform transition-all origin-top-right">
+                                    <div className="fixed inset-0 z-[105]" onClick={() => setIsLocationOpen(false)}></div>
+                                    <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 z-[110] overflow-hidden transform transition-all origin-top-right">
                                         <div className="p-4 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
                                                 <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
@@ -385,8 +385,8 @@ const Navbar = () => {
 
                             {isNotificationOpen && (
                                 <>
-                                    <div className="fixed inset-0 z-40" onClick={() => setIsNotificationOpen(false)}></div>
-                                    <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden transform transition-all origin-top-right">
+                                    <div className="fixed inset-0 z-[105]" onClick={() => setIsNotificationOpen(false)}></div>
+                                    <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 z-[110] overflow-hidden transform transition-all origin-top-right">
                                         <div className="p-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
                                             <div className="flex items-center gap-2">
                                                 <h3 className="font-bold text-gray-900">Notifications</h3>

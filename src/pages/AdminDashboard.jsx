@@ -4,11 +4,12 @@ import toast from 'react-hot-toast';
 import {
     FaUsers, FaCar, FaChartLine,
     FaCheckCircle, FaTimesCircle, FaEllipsisV, FaSearch, FaBell, FaTrash,
-    FaShoppingCart, FaDollarSign, FaChevronDown
+    FaShoppingCart, FaDollarSign, FaChevronDown, FaTag
 } from 'react-icons/fa';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../context/AuthContext';
 import { adminAPI, userAPI, productAPI } from '../services/api';
+import AdminPromotions from './AdminPromotions';
 
 const AdminDashboard = () => {
     const { user } = useAuth();
@@ -441,6 +442,12 @@ const AdminDashboard = () => {
                         active={activeTab === 'stores'}
                         onClick={() => setActiveTab('stores')}
                     />
+                    <SidebarItem 
+                        icon={<FaTag />} 
+                        label="Promotions" 
+                        active={activeTab === 'promotions'}
+                        onClick={() => setActiveTab('promotions')}
+                    />
                 </nav>
             </aside>
 
@@ -857,6 +864,10 @@ const AdminDashboard = () => {
                                 </div>
                             </div>
                         </>
+                    )}
+
+                    {activeTab === 'promotions' && (
+                        <AdminPromotions />
                     )}
                 </div>
             </main>

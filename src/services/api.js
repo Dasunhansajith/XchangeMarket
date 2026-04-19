@@ -299,6 +299,36 @@ export const notificationAPI = {
     apiWithPrefix.post(`/notifications/${id}/read`),
 };
 
+// ============ PROMOTION ENDPOINTS ============
+export const promotionAPI = {
+  // For buyer checkout: returns seller promos + admin promos + welcome promo
+  getAvailablePromotions: (userId, sellerIds) =>
+    apiWithPrefix.get('/promotions/available', {
+      params: { userId, cartItems: sellerIds.join(',') }
+    }),
+
+  // For seller dashboard: returns ONLY the logged-in seller's own promotions
+  getSellerPromotions: () =>
+    apiWithPrefix.get('/promotions/seller'),
+
+  getAdminPromotions: () =>
+    apiWithPrefix.get('/promotions/admin'),
+
+  getUserUsage: (userId) =>
+    apiWithPrefix.get(`/promotions/user-usage/${userId}`),
+
+  createPromotion: (promotionData) =>
+    apiWithPrefix.post('/promotions', promotionData),
+
+  deletePromotion: (id) =>
+    apiWithPrefix.delete(`/promotions/${id}`),
+
+  applyPromotion: (promotionId, userId, subtotal) =>
+    apiWithPrefix.post('/checkout/apply-promotion', {
+      promotionId, userId, subtotal
+    }),
+};
+
 // ============ PAYMENT ENDPOINTS ============
 export const paymentAPI = {
   // Get all available payment methods
