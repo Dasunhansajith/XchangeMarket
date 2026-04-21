@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://xchange-com-4.onrender.com';
+const API_BASE_URL = 'http://localhost:8080';
 
 // Create axios instance for URLs that start with /api
 const apiWithPrefix = axios.create({
