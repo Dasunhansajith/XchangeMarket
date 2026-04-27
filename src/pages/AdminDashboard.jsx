@@ -58,17 +58,17 @@ const AdminDashboard = () => {
             setStatsLoading(true);
             setStatsError(null);
             const productsRes = await productAPI.getAllProducts();
-            const products = Array.isArray(productsRes.data) ? productsRes.data : [];
+            const products = Array.isArray(productsRes.data) ? productsRes.data : (productsRes.data?.content || []);
             console.log('Products fetched:', products.length);
             
             // Fetch users count
             const usersRes = await userAPI.getAllUsers();
-            const usersList = Array.isArray(usersRes.data) ? usersRes.data : [];
+            const usersList = Array.isArray(usersRes.data) ? usersRes.data : (usersRes.data?.content || []);
             console.log('Users fetched:', usersList.length);
             
             // Fetch all orders
             const ordersRes = await adminAPI.getAllOrders();
-            const allOrders = Array.isArray(ordersRes.data) ? ordersRes.data : [];
+            const allOrders = Array.isArray(ordersRes.data) ? ordersRes.data : (ordersRes.data?.content || []);
             console.log('Orders fetched:', allOrders.length);
             
             // Calculate today's date
@@ -185,7 +185,7 @@ const AdminDashboard = () => {
         try {
             setLoading(true);
             const response = await adminAPI.getAllSellerApplications();
-            const apps = Array.isArray(response.data) ? response.data : [];
+            const apps = Array.isArray(response.data) ? response.data : (response.data?.content || []);
             console.log('Seller applications fetched:', apps.length);
             setApplications(apps);
             
@@ -208,7 +208,7 @@ const AdminDashboard = () => {
         try {
             setLoading(true);
             const response = await userAPI.getAllUsers();
-            const userList = Array.isArray(response.data) ? response.data : [];
+            const userList = Array.isArray(response.data) ? response.data : (response.data?.content || []);
             console.log('Users fetched:', userList.length);
             setUsers(userList);
         } catch (err) {
@@ -224,7 +224,7 @@ const AdminDashboard = () => {
         try {
             setLoading(true);
             const response = await productAPI.getAllProducts();
-            const productList = Array.isArray(response.data) ? response.data : [];
+            const productList = Array.isArray(response.data) ? response.data : (response.data?.content || []);
             console.log('Products fetched:', productList.length);
             setProducts(productList);
         } catch (err) {
@@ -240,10 +240,10 @@ const AdminDashboard = () => {
         try {
             setLoading(true);
             const shopsResponse = await adminAPI.getAllShops();
-            const shopList = Array.isArray(shopsResponse.data) ? shopsResponse.data : [];
+            const shopList = Array.isArray(shopsResponse.data) ? shopsResponse.data : (shopsResponse.data?.content || []);
             
             const usersResponse = await userAPI.getAllUsers();
-            const usersList = Array.isArray(usersResponse.data) ? usersResponse.data : [];
+            const usersList = Array.isArray(usersResponse.data) ? usersResponse.data : (usersResponse.data?.content || []);
             
             // Create a map of userId to user for quick lookup
             const userMap = {};
@@ -432,7 +432,7 @@ const AdminDashboard = () => {
                     />
                     <SidebarItem 
                         icon={<FaCar />} 
-                        label="Advertisements" 
+                        label="Products" 
                         active={activeTab === 'ads'}
                         onClick={() => setActiveTab('ads')}
                     />
@@ -455,31 +455,6 @@ const AdminDashboard = () => {
             <main className="flex-1 flex flex-col">
                 {/* Header */}
                 <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-8">
-                    <div className="flex items-center gap-4 bg-gray-100 px-4 py-2 rounded-lg w-96">
-                        <FaSearch className="text-gray-400" />
-                        <input
-                            type="text"
-                            placeholder="Search records..."
-                            className="bg-transparent border-none focus:ring-0 text-sm w-full"
-                        />
-                    </div>
-                    <div className="flex items-center gap-6">
-                        <button className="relative text-gray-400 hover:text-gray-600">
-                            <FaBell size={20} />
-                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full">
-                                {applications.filter(app => app.status === 'PENDING').length}
-                            </span>
-                        </button>
-                        <div className="flex items-center gap-3">
-                            <div className="text-right">
-                                <p className="text-sm font-bold text-gray-800">{user?.fullName || user?.name || 'Admin User'}</p>
-                                <p className="text-xs text-gray-500">System Administrator</p>
-                            </div>
-                            <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center text-white font-bold">
-                                {(user?.fullName || user?.name || 'A').charAt(0)}
-                            </div>
-                        </div>
-                    </div>
                 </header>
 
                 {/* Dashboard Body */}
@@ -724,7 +699,7 @@ const AdminDashboard = () => {
                     {activeTab === 'ads' && (
                         <>
                             <div className="flex justify-between items-center">
-                                <h2 className="text-2xl font-bold text-gray-800">Advertisements Management</h2>
+                                <h2 className="text-2xl font-bold text-gray-800">Product Management</h2>
                                 <span className="text-sm text-gray-500">Total: {products.length} products</span>
                             </div>
 
